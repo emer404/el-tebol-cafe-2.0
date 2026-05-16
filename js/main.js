@@ -49,4 +49,67 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   });
+
+  // Expanded card detail
+  const modal = document.getElementById('cardModal');
+  const modalImage = document.getElementById('modalImage');
+  const modalCategory = document.getElementById('modalCategory');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalDescription = document.getElementById('modalDescription');
+  const modalPrice = document.getElementById('modalPrice');
+  const closeModalTriggers = document.querySelectorAll('[data-close-modal]');
+
+  const categoryLabels = {
+    bebidas: 'Bebida',
+    espacios: 'Coworking'
+  };
+
+  function openCardModal(card) {
+    const image = card.querySelector('.card-img-wrapper img');
+    const title = card.querySelector('h3');
+    const description = card.querySelector('p');
+    const price = card.querySelector('.price');
+    const category = card.getAttribute('data-cat');
+
+    modalImage.src = image.src;
+    modalImage.alt = image.alt;
+    modalCategory.textContent = categoryLabels[category] || 'Detalle';
+    modalTitle.textContent = title.textContent;
+    modalDescription.textContent = description.textContent;
+    modalPrice.textContent = price.textContent;
+
+    modal.classList.add('is-open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+  }
+
+  function closeCardModal() {
+    modal.classList.remove('is-open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+  }
+
+  items.forEach(item => {
+    item.setAttribute('tabindex', '0');
+    item.setAttribute('role', 'button');
+    item.setAttribute('aria-label', `Ver detalle de ${item.querySelector('h3').textContent}`);
+
+    item.addEventListener('click', () => openCardModal(item));
+    item.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openCardModal(item);
+      }
+    });
+  });
+
+  closeModalTriggers.forEach(trigger => {
+    trigger.addEventListener('click', closeCardModal);
+  });
+
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && modal.classList.contains('is-open')) {
+      closeCardModal();
+    }
+  });
 });

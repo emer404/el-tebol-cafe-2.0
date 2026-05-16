@@ -562,6 +562,11 @@ h1, h2, h3, .brand-text {
   cursor: pointer;
 }
 
+.card:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 4px;
+}
+
 .card:hover {
   transform: translateY(-10px);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
@@ -615,6 +620,168 @@ h1, h2, h3, .brand-text {
   font-size: 1.25rem;
   font-weight: 600;
   color: var(--primary);
+}
+
+/* Expanded Card Modal */
+.card-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.card-modal.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.card-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 8, 6, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.card-modal-content {
+  position: relative;
+  width: min(980px, 100%);
+  max-height: min(86vh, 760px);
+  display: grid;
+  grid-template-columns: minmax(280px, 1.05fr) minmax(280px, 0.95fr);
+  overflow: hidden;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, rgba(45, 31, 22, 0.98), rgba(17, 14, 12, 0.98));
+  border: 1px solid rgba(200, 168, 130, 0.28);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.65);
+  transform: scale(0.88) translateY(24px);
+  transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.12);
+}
+
+.card-modal.is-open .card-modal-content {
+  transform: scale(1) translateY(0);
+}
+
+.card-modal-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 2;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  background: rgba(17, 14, 12, 0.7);
+  color: var(--text-light);
+  font-size: 1.8rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.card-modal-close:hover,
+.card-modal-close:focus-visible {
+  background: var(--primary);
+  color: var(--bg-dark);
+  outline: none;
+}
+
+.card-modal-img {
+  min-height: 480px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.card-modal-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.card-modal-body {
+  padding: 3rem;
+  overflow-y: auto;
+}
+
+.card-modal-label {
+  display: inline-block;
+  margin-bottom: 1rem;
+  color: var(--primary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.card-modal-body h2 {
+  font-size: 3rem;
+  line-height: 1;
+  margin-bottom: 1rem;
+  color: var(--primary-light);
+}
+
+.card-modal-body p {
+  color: var(--text-muted);
+  font-size: 1.05rem;
+  margin-bottom: 1.5rem;
+}
+
+.card-modal-info {
+  padding: 1rem;
+  margin-bottom: 2rem;
+  border-left: 3px solid var(--primary);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+}
+
+.card-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+body.modal-open {
+  overflow: hidden;
+}
+
+@media (max-width: 760px) {
+  .card-modal {
+    padding: 1rem;
+    align-items: flex-end;
+  }
+
+  .card-modal-content {
+    max-height: 88vh;
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+
+  .card-modal-img {
+    min-height: 260px;
+    height: 34vh;
+  }
+
+  .card-modal-body {
+    padding: 2rem 1.25rem 1.5rem;
+    overflow: visible;
+  }
+
+  .card-modal-body h2 {
+    font-size: 2.25rem;
+  }
+
+  .card-modal-footer .btn {
+    width: 100%;
+    text-align: center;
+  }
 }
 
 /* Contact Section */

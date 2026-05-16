@@ -247,6 +247,31 @@
     <p>© 2026 <span>Trébol Café</span> · Pasión en cada grano</p>
   </footer>
 
+  <div class="card-modal" id="cardModal" aria-hidden="true">
+    <div class="card-modal-backdrop" data-close-modal></div>
+    <article class="card-modal-content" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button class="card-modal-close" type="button" aria-label="Cerrar detalle" data-close-modal>×</button>
+      <div class="card-modal-img">
+        <img src="" alt="" id="modalImage">
+      </div>
+      <div class="card-modal-body">
+        <span class="card-modal-label" id="modalCategory"></span>
+        <h2 id="modalTitle"></h2>
+        <p id="modalDescription"></p>
+        <div class="card-modal-info">
+          <span>Incluye preparación al momento y atención personalizada en Trébol Café.</span>
+        </div>
+        <div class="card-modal-footer">
+          <span class="price" id="modalPrice"></span>
+          <a href="#contacto" class="btn btn-primary" data-close-modal>
+            <span class="btn-text">Consultar</span>
+            <div class="btn-bg-hover"></div>
+          </a>
+        </div>
+      </div>
+    </article>
+  </div>
+
   <script src="js/main.js"></script>
 </body>
 </html>
