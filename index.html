@@ -182,74 +182,69 @@
     <!-- Contacto Section -->
     <section class="section contact-section" id="contacto">
       <div class="container">
-        <div class="contact-grid">
-          <div class="contact-info reveal-left">
-            <h2>Hablemos</h2>
-            <div class="divider-left"></div>
-            <p>¿Tienes alguna duda, quieres hacer una reserva especial o cotizar nuestros espacios de coworking? Escríbenos y te responderemos a la brevedad.</p>
-            <ul class="contact-list">
-              <li>
-                <span class="icon">📍</span>
-                <div>
-                  <strong>Ubicación</strong>
-                  <span>Calle Ficticia 123, Distrito Cafetero</span>
-                </div>
-              </li>
-              <li>
-                <span class="icon">📞</span>
-                <div>
-                  <strong>Teléfono</strong>
-                  <span>+57 300 123 4567</span>
-                </div>
-              </li>
-              <li>
-                <span class="icon">✉️</span>
-                <div>
-                  <strong>Email</strong>
-                  <span>hola@trebolcafe.com</span>
-                </div>
-              </li>
-              <li>
-                <span class="icon">⏰</span>
-                <div>
-                  <strong>Horario</strong>
-                  <span>Lunes a Sábado: 8:00 AM - 9:00 PM</span>
-                </div>
-              </li>
-            </ul>
-          </div>
-          
-          <div class="contact-form-wrapper reveal-right">
-            <form class="contact-form" onsubmit="event.preventDefault(); alert('¡Gracias por tu mensaje! Te contactaremos pronto.');">
-              <div class="form-group">
-                <input type="text" placeholder=" " required id="name">
-                <label for="name">Nombre completo</label>
-              </div>
-              <div class="form-group">
-                <input type="email" placeholder=" " required id="email">
-                <label for="email">Correo electrónico</label>
-              </div>
-              <div class="form-group">
-                <input type="text" placeholder=" " required id="subject">
-                <label for="subject">Asunto</label>
-              </div>
-              <div class="form-group">
-                <textarea placeholder=" " required id="message" rows="4"></textarea>
-                <label for="message">Mensaje</label>
-              </div>
-              <button type="submit" class="btn btn-primary submit-btn">
-                <span class="btn-text">Enviar Mensaje</span>
-                <div class="btn-bg-hover"></div>
-              </button>
-            </form>
-          </div>
+        <div class="contact-header">
+          <h2>Hablemos</h2>
+          <div class="divider"></div>
+          <p>¿Tienes alguna duda, quieres hacer una reserva especial o cotizar nuestros espacios de coworking? Escríbenos y te responderemos a la brevedad.</p>
+        </div>
+        
+        <div class="contact-form-wrapper reveal-up">
+          <form class="contact-form" onsubmit="event.preventDefault(); alert('¡Gracias por tu mensaje! Te contactaremos pronto.');">
+            <div class="form-group">
+              <input type="text" placeholder=" " required id="name">
+              <label for="name">Nombre completo</label>
+            </div>
+            <div class="form-group">
+              <input type="email" placeholder=" " required id="email">
+              <label for="email">Correo electrónico</label>
+            </div>
+            <div class="form-group">
+              <input type="text" placeholder=" " required id="subject">
+              <label for="subject">Asunto</label>
+            </div>
+            <div class="form-group">
+              <textarea placeholder=" " required id="message" rows="4"></textarea>
+              <label for="message">Mensaje</label>
+            </div>
+            <button type="submit" class="btn btn-primary submit-btn">
+              <span class="btn-text">Enviar Mensaje</span>
+              <div class="btn-bg-hover"></div>
+            </button>
+          </form>
         </div>
       </div>
     </section>
   </main>
 
   <footer class="footer">
-    <p>© 2026 <span>Trébol Café</span> · Pasión en cada grano</p>
+    <div class="footer-content">
+      <div class="footer-brand">
+        <p>© 2026 <span>Trébol Café</span></p>
+        <p class="footer-slogan">Pasión en cada grano</p>
+      </div>
+      
+      <div class="footer-contact">
+        <h3>Contáctanos</h3>
+        <ul class="footer-contact-list">
+          <li>
+            <span class="icon">📍</span>
+            <span>Calle Ficticia 123, Distrito Cafetero</span>
+          </li>
+          <li>
+            <span class="icon">📞</span>
+            <span>+57 300 123 4567</span>
+          </li>
+          <li>
+            <span class="icon">✉️</span>
+            <span>hola@trebolcafe.com</span>
+          </li>
+          <li>
+            <span class="icon">⏰</span>
+            <span>Lunes a Sábado: 8:00 AM - 9:00 PM</span>
+          </li>
+        </ul>
+      </div>
+    </div>
   </footer>
 
   <div class="card-modal" id="cardModal" aria-hidden="true">
