@@ -1574,7 +1574,7 @@ body.modal-open {
     align-items: flex-end;
     background:
       linear-gradient(180deg, rgba(10, 10, 10, 0.4) 0%, rgba(10, 10, 10, 0.8) 46%, var(--bg-dark) 100%),
-      url("../img/fondo.jpeg") center / cover no-repeat;
+      url("") center / cover no-repeat;
   }
 
   .hero::before {
