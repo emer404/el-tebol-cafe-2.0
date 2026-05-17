@@ -134,6 +134,14 @@
       
       <div class="wave">
         <svg viewBox="0 0 1200 120" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="waveGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#131513"/>
+              <stop offset="45%" stop-color="#2a2118"/>
+              <stop offset="72%" stop-color="#3f321f"/>
+              <stop offset="100%" stop-color="#131513"/>
+            </linearGradient>
+          </defs>
           <path d="M0,0 C300,80 600,80 900,40 C1050,20 1150,40 1200,60 L1200,120 L0,120 Z"></path>
         </svg>
       </div>
@@ -254,6 +262,38 @@
                 <figcaption>Espacios para reunirte</figcaption>
               </figure>
             </div>
+          </div>
+
+          <div class="contact-form-wrapper reveal-up">
+            <form class="contact-form" action="#" method="post" data-contact-form>
+              <h3 class="contact-form-title">Escríbenos</h3>
+              <p class="contact-form-text">Cuéntanos qué necesitas y te contactaremos pronto.</p>
+
+              <div class="form-group">
+                <input type="text" id="contactName" name="nombre" placeholder=" " required>
+                <label for="contactName">Nombre</label>
+              </div>
+
+              <div class="form-group">
+                <input type="email" id="contactEmail" name="correo" placeholder=" " required>
+                <label for="contactEmail">Correo electrónico</label>
+              </div>
+
+              <div class="form-group">
+                <input type="tel" id="contactPhone" name="telefono" placeholder=" ">
+                <label for="contactPhone">Teléfono</label>
+              </div>
+
+              <div class="form-group">
+                <textarea id="contactMessage" name="mensaje" rows="5" placeholder=" " required></textarea>
+                <label for="contactMessage">Mensaje</label>
+              </div>
+
+              <button type="submit" class="btn btn-primary submit-btn">
+                <span class="btn-text">Enviar mensaje</span>
+                <div class="btn-bg-hover"></div>
+              </button>
+            </form>
           </div>
         </div>
       </div>

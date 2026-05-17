@@ -130,6 +130,26 @@ document.addEventListener('DOMContentLoaded', () => {
     trigger.addEventListener('click', closeCardModal);
   });
 
+  const contactForm = document.querySelector('[data-contact-form]');
+
+  if (contactForm) {
+    contactForm.addEventListener('submit', event => {
+      event.preventDefault();
+
+      const formData = new FormData(contactForm);
+      const message = [
+        'Hola Trébol Café, quiero más información.',
+        `Nombre: ${formData.get('nombre')}`,
+        `Correo: ${formData.get('correo')}`,
+        `Teléfono: ${formData.get('telefono') || 'No indicado'}`,
+        `Mensaje: ${formData.get('mensaje')}`
+      ].join('\n');
+
+      window.open(`https://wa.me/573213298852?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+      contactForm.reset();
+    });
+  }
+
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && modal.classList.contains('is-open')) {
       closeCardModal();

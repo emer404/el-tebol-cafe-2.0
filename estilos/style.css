@@ -265,7 +265,10 @@ h1, h2, h3, .brand-text {
   justify-content: center;
   padding-top: 5rem;
   overflow: hidden;
-  
+  background:
+    linear-gradient(90deg, rgba(10, 10, 10, 0.88) 0%, rgba(10, 10, 10, 0.58) 48%, rgba(10, 10, 10, 0.72) 100%),
+    linear-gradient(180deg, rgba(10, 10, 10, 0.12) 0%, var(--bg-dark) 100%),
+    url("../img/fondo.jpeg") center / cover no-repeat;
 }
 
 .bg-elements {
@@ -702,7 +705,7 @@ h1, h2, h3, .brand-text {
 }
 
 .wave path {
-  fill: #110e0c; /* Color that matches the transition to the next section */
+  fill: url("#waveGradient");
   animation: drawWave 1.5s ease-out 1.8s forwards;
   opacity: 0;
 }
@@ -715,7 +718,21 @@ h1, h2, h3, .brand-text {
 /* Sections */
 .section {
   padding: 5rem 1.5rem;
-  background: #110e0c; /* Deep dark matching the wave */
+  background: #000; /* Deep dark matching the wave */
+}
+
+.catalog-section {
+  position: relative;
+  overflow: hidden;
+  color: var(--text-light);
+  background:
+    linear-gradient(180deg, rgba(10, 10, 10, 0.88) 0%, rgba(17, 14, 12, 0.9) 52%, rgba(10, 10, 10, 0.94) 100%),
+    url("../img/espacios2.jpeg") center / cover no-repeat;
+}
+
+.catalog-section .container {
+  position: relative;
+  z-index: 1;
 }
 
 .container {
@@ -1100,20 +1117,20 @@ body.modal-open {
 /* Contact Section */
 .contact-layout {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(22rem, 31rem);
   gap: 3.5rem;
   align-items: center;
-  justify-items: center;
+  justify-items: stretch;
 }
 
 .contact-info {
   min-width: 0;
-  max-width: 800px;
+  max-width: 620px;
   width: 100%;
 }
 
 .contact-header {
-  text-align: center;
+  text-align: left;
   margin-bottom: 2.25rem;
   max-width: 100%;
 }
@@ -1126,7 +1143,7 @@ body.modal-open {
 
 .contact-header .divider {
   width: 4rem;
-  margin: 0 auto 2rem auto;
+  margin: 0 0 2rem 0;
 }
 
 .contact-header p {
@@ -1261,6 +1278,21 @@ body.modal-open {
   right: 0;
   height: 4px;
   background: linear-gradient(to right, var(--primary-light), var(--primary), var(--primary-light));
+}
+
+.contact-form-title {
+  margin-bottom: 0.45rem;
+  color: var(--primary-light);
+  font-family: var(--font-serif);
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.contact-form-text {
+  margin-bottom: 2rem;
+  color: var(--text-muted);
+  font-size: 0.98rem;
+  line-height: 1.5;
 }
 
 /* Mobile Contact Improvements */
@@ -1701,7 +1733,7 @@ body.modal-open {
     align-items: flex-end;
     background:
       linear-gradient(180deg, rgba(10, 10, 10, 0.4) 0%, rgba(10, 10, 10, 0.8) 46%, var(--bg-dark) 100%),
-      url("") center / cover no-repeat;
+      url("../img/fondo.jpeg") center / cover no-repeat;
   }
 
   .hero::before {
@@ -2703,7 +2735,9 @@ body.modal-open {
   
   /* Catalog Section Updates */
   .catalog-section {
-    background: #110e0c !important;
+    background:
+      linear-gradient(180deg, rgba(10, 10, 10, 0.9) 0%, rgba(17, 14, 12, 0.92) 48%, rgba(10, 10, 10, 0.96) 100%),
+      url("../img/espacios2.jpeg") center / cover no-repeat !important;
     color: var(--text-light);
   }
   
@@ -2744,23 +2778,13 @@ body.modal-open {
   }
   
   .catalog-grid .card-body {
-    position: absolute !important;
-    top: 0.4rem !important;
-    right: 0.4rem !important;
-    bottom: auto !important;
-    left: auto !important;
-    width: fit-content !important;
-    max-width: calc(100% - 0.8rem) !important;
     padding: 0.35rem 0.45rem !important;
     border-radius: 0.55rem !important;
     flex-direction: column !important;
-    align-items: flex-end !important;
+    align-items: flex-start !important;
     gap: 0.12rem !important;
-    background: rgba(18, 14, 11, 0.82) !important;
-    border: 1px solid rgba(212, 175, 55, 0.28) !important;
     transform: none !important;
     transition: background 0.2s ease, border-color 0.2s ease !important;
-    z-index: 20 !important;
   }
 
   .catalog-grid .card:hover .card-body {
@@ -2770,11 +2794,6 @@ body.modal-open {
   .catalog-grid .card h3 {
     font-size: 0.68rem !important;
     margin-bottom: 0 !important;
-    max-width: 100%;
-    text-align: right !important;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 
   .catalog-grid .card p {
@@ -2782,11 +2801,7 @@ body.modal-open {
   }
   
   .catalog-grid .price {
-    align-self: flex-end !important;
-    padding: 0 !important;
-    background: transparent !important;
     font-size: 0.68rem !important;
-    line-height: 1 !important;
   }
 }
 
