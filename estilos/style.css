@@ -1743,7 +1743,7 @@ body.modal-open {
     inline-size: 4.35rem;
     object-fit: cover;
     margin-bottom: 1.15rem !important;
-    border-radius: 1rem !important;
+    border-radius: 50% !important;
     border: 1px solid rgba(212, 175, 55, 0.48);
     box-shadow: 0 16px 42px rgba(0, 0, 0, 0.5);
     margin: 0 auto;
