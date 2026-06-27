@@ -1,4 +1,12 @@
-export type Category = 'Todos' | 'Bebidas Calientes' | 'Bebidas Frías' | 'Pastelería' | 'Coworking';
+export type Category =
+  | 'Todos'
+  | 'Bebidas Calientes'
+  | 'Bebidas Frías'
+  | 'Desayunos'
+  | 'Postres'
+  | 'Tortas'
+  | 'Métodos Especialidad'
+  | 'Coworking';
 
 export interface MenuItem {
   id: string;
@@ -7,12 +15,14 @@ export interface MenuItem {
   category: Category;
   description: string;
   image: string;
+  images?: string[]; // gallery when multiple shots exist
   details?: {
     origin?: string;
     intensity?: string;
     allergens?: string;
     wifi?: string;
     compañía?: string;
+    nota?: string;
   };
 }
 

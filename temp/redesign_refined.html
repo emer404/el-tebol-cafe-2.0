@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+
+<html class="scroll-smooth" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Trébol Café - Coworking &amp; Sabor</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&amp;family=Outfit:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary-fixed": "#ffdea5",
+                    "primary": "#061b0e",
+                    "on-secondary-container": "#72624c",
+                    "primary-fixed-dim": "#b4cdb8",
+                    "on-tertiary-fixed-variant": "#5d4201",
+                    "on-primary": "#ffffff",
+                    "surface-container-highest": "#e4e2dd",
+                    "tertiary-container": "#3a2800",
+                    "on-primary-container": "#819986",
+                    "inverse-on-surface": "#f2f1ec",
+                    "on-secondary": "#ffffff",
+                    "on-primary-fixed-variant": "#364c3c",
+                    "surface-tint": "#4d6453",
+                    "surface-bright": "#fbf9f4",
+                    "surface-container-lowest": "#ffffff",
+                    "inverse-surface": "#30312e",
+                    "secondary-fixed-dim": "#d8c3a9",
+                    "primary-fixed": "#d0e9d4",
+                    "on-background": "#1b1c19",
+                    "on-error-container": "#93000a",
+                    "surface-container-high": "#eae8e3",
+                    "on-tertiary-container": "#b18d48",
+                    "on-surface": "#1b1c19",
+                    "secondary-fixed": "#f5dfc3",
+                    "soft-cream": "#F9F7F2",
+                    "on-surface-variant": "#434843",
+                    "on-secondary-fixed": "#251a09",
+                    "error-container": "#ffdad6",
+                    "on-primary-fixed": "#0b2013",
+                    "inverse-primary": "#b4cdb8",
+                    "error": "#ba1a1a",
+                    "surface-variant": "#e4e2dd",
+                    "roasted-bean": "#3F321F",
+                    "surface-container": "#f0eee9",
+                    "outline": "#737973",
+                    "on-error": "#ffffff",
+                    "primary-container": "#1b3022",
+                    "on-tertiary": "#ffffff",
+                    "secondary": "#6c5c46",
+                    "surface-dim": "#dbdad5",
+                    "outline-variant": "#c3c8c1",
+                    "on-secondary-fixed-variant": "#534430",
+                    "burnished-gold": "#C5A059",
+                    "surface": "#fbf9f4",
+                    "background": "#fbf9f4",
+                    "charcoal-ink": "#131513",
+                    "on-tertiary-fixed": "#261900",
+                    "deep-forest": "#1B3022",
+                    "tertiary-fixed-dim": "#e9c176",
+                    "tertiary": "#211500",
+                    "secondary-container": "#f5dfc3",
+                    "surface-container-low": "#f5f3ee"
+            },
+            "fontFamily": {
+                    "serif": ["EB Garamond", "serif"],
+                    "sans": ["Outfit", "sans-serif"]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        body {
+            background-color: #0A0A0A;
+            color: #FBF9F4;
+            font-family: 'Outfit', sans-serif;
+        }
+        
+        .serif-heading {
+            font-family: 'EB Garamond', serif;
+        }
+
+        .hero-glow {
+            background: radial-gradient(circle at 50% 50%, rgba(197, 160, 89, 0.1) 0%, transparent 70%);
+        }
+
+        .glass-card {
+            background: rgba(27, 28, 25, 0.4);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .text-gradient {
+            background: linear-gradient(135deg, #F5DFC3 0%, #C5A059 50%, #8B6F47 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-fadeInUp {
+            animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .delay-1 { animation-delay: 0.1s; }
+        .delay-2 { animation-delay: 0.2s; }
+        .delay-3 { animation-delay: 0.3s; }
+
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="selection:bg-burnished-gold/30 selection:text-white">
+<!-- Navigation -->
+<header class="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-[#0A0A0A]/70 backdrop-blur-xl">
+<div class="max-w-[1200px] mx-auto px-6 h-20 flex items-center justify-between">
+<a class="flex items-center gap-3 group" href="#">
+<div class="w-10 h-10 rounded-full bg-cover bg-center border border-burnished-gold/30 group-hover:scale-105 transition-transform" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBI2ZbliJBU30fXQDANspZYoChyEuJotXAPGMnuDkWvxMJ5EfOtZIc5CIV0cOrktu6peoRrEoIFG9XfjOaAbz8YKtu7gg--tuhdr7tJ5glsUuabOlOM47DHlCRUglWB8cSz_cVYDRbp8LzydidCwXjReuXsS_9SPOZQt7cszwnOqliP1dFSrjTys6xlJvSI-9lVn0s-RBeTZMcz0o6BeiyvUjuZ1wlT6MHuR1tvhlnFVNNfWsZO5P9Ae1acnevGsamgxDZduxm1lO7J');"></div>
+<span class="serif-heading text-xl font-medium tracking-widest text-soft-cream">TRÉBOL CAFÉ</span>
+</a>
+<nav class="hidden md:flex items-center gap-10">
+<a class="text-sm font-medium text-white/70 hover:text-burnished-gold transition-colors tracking-wide uppercase" href="#inicio">Inicio</a>
+<a class="text-sm font-medium text-white/70 hover:text-burnished-gold transition-colors tracking-wide uppercase" href="#catalogo">Catálogo</a>
+<a class="text-sm font-medium text-white/70 hover:text-burnished-gold transition-colors tracking-wide uppercase" href="#coworking">Coworking</a>
+<a class="text-sm font-medium text-white/70 hover:text-burnished-gold transition-colors tracking-wide uppercase" href="#contacto">Contacto</a>
+</nav>
+<button class="md:hidden text-white">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</div>
+</header>
+<main>
+<!-- Hero Section -->
+<section class="relative min-h-screen pt-32 pb-20 flex items-center overflow-hidden" id="inicio">
+<div class="absolute inset-0 z-0">
+<div class="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-[#0A0A0A] via-transparent to-[#0A0A0A]"></div>
+<img alt="" class="w-full h-full object-cover opacity-20" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCFZEsDbFe0Al3dDY3g3TDpg16KAfSG2YVOsF70121T8WxhRT6iDppBya22bFDBFt2AAgrajJSRyaBRvA1Ci5FGZQmF6ltBc19S5GgiOkCsHF68dHjAQTNMebsKrc7XeOmX0Ttp4YRjGlFkxLCgW3FC2qzqxk0xygWzRGLp3c9cxjqAkWTx7Q6cXlgrIZdCuyjg2uuZeqRV3VX3d61vtXUW_n8k9LyV7HWAhsgZeFvu-JLZ7KZr5Jsbn1m9sovow13yjLFP675KoUqz"/>
+<div class="absolute top-[20%] right-[10%] w-[500px] h-[500px] hero-glow"></div>
+</div>
+<div class="container max-w-[1200px] mx-auto px-6 relative z-10">
+<div class="grid lg:grid-cols-2 gap-16 items-center">
+<div class="animate-fadeInUp opacity-0">
+<div class="flex items-center gap-3 mb-6">
+<div class="h-[1px] w-8 bg-burnished-gold"></div>
+<span class="text-xs font-bold tracking-[0.3em] uppercase text-burnished-gold">Bienvenido a</span>
+</div>
+<h1 class="serif-heading text-6xl md:text-8xl font-medium leading-none mb-8">
+<span class="block">Trébol</span>
+<span class="block text-gradient">Café</span>
+</h1>
+<p class="text-white/60 text-lg md:text-xl font-light leading-relaxed mb-10 max-w-lg">
+                            Café de origen, preparado con pasión y servido con calidez en un ambiente diseñado para inspirar tu jornada.
+                        </p>
+<div class="flex flex-wrap gap-5 mb-16">
+<a class="px-8 py-4 bg-burnished-gold text-primary font-semibold rounded-full hover:bg-tertiary-fixed transition-all duration-300 shadow-xl shadow-burnished-gold/20" href="#catalogo">
+                                Ver Catálogo
+                            </a>
+<a class="px-8 py-4 border border-white/20 hover:border-burnished-gold text-white font-medium rounded-full transition-all duration-300" href="#coworking">
+                                Explorar Coworking
+                            </a>
+</div>
+<div class="grid grid-cols-3 gap-8 pt-8 border-t border-white/10">
+<div class="space-y-2">
+<span class="material-symbols-outlined text-burnished-gold">coffee</span>
+<p class="text-sm font-medium text-soft-cream">Café de Origen</p>
+</div>
+<div class="space-y-2">
+<span class="material-symbols-outlined text-burnished-gold">eco</span>
+<p class="text-sm font-medium text-soft-cream">Natural</p>
+</div>
+<div class="space-y-2">
+<span class="material-symbols-outlined text-burnished-gold">desk</span>
+<p class="text-sm font-medium text-soft-cream">Coworking</p>
+</div>
+</div>
+</div>
+<div class="relative animate-fadeInUp opacity-0 delay-2">
+<div class="grid grid-cols-12 gap-4">
+<div class="col-span-8 overflow-hidden rounded-2xl aspect-[4/5] border border-white/10 shadow-2xl relative group">
+<img alt="Coffee Experience" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDuQdvjqBNBPFARwIe-dyaHatqZ_C60xJj5KYEY0gld-v4SneNzhdLyuGp5YhE32e-zHAgqL_oU6txiN3jOsfjEku6ybyzUaS_C_TCIFUZ3lFvYr6w_52hVPGkEsoUGxgzz-9AmoxB07YmfuY_wfEsw9K5rH-2moeDngS6eKB5B-S9qqBguGdCRQOzF5vU9DRskfXkXNhkOmAWwdhcpWyWUnZxFNtLUV40YBO9e4ww0hYOrWTy8jMCBb3yA0kQMptFCbYVNbyWtrpOh"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+</div>
+<div class="col-span-4 flex flex-col gap-4">
+<div class="overflow-hidden rounded-2xl aspect-square border border-white/10 shadow-xl group">
+<img alt="Coworking" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBwDxRmHwQEt2SsUt13oyBOiRv-bdb2nddsJTY1EL_HFe2B9Y7dPc-RvsNuQ-IIUO5xPL_7LH4lbyvgAiXr28qZHXrXgwH3hzOEJ2-vpC8My4Fmh2OdEB7eK4RQXB8jp0-UOO-Z6lNnyafZlB4CXYVn27RH_cDup4bjFwkovoBPsEvTjEuWwsSUdvhglQ6q3B8FawD16D8HF2pq9qICG1MsdYYBzv7gPIiWPfHDaC3YOCep26b9tJH253FP8vKKRJQA3jmFAOEj8TpQ"/>
+</div>
+<div class="overflow-hidden rounded-2xl aspect-square border border-white/10 shadow-xl group">
+<img alt="Latte Art" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" src="https://lh3.googleusercontent.com/aida-public/AB6AXuABlvIp6q_9scNTHzUhiUdcPJVUEaFXaC5iQVcLBmw-d40S-vTpa_bz3-OSoYTEsuMsFROjDdFlAAte_XITBSLfXprzwlmvNQzSXj-O8cj1DMBkirdt9mQp2aCK6416qCI64bk-T5h1F-s182tGYEEqDGI47SBrd43FKF_yv_y1EPswfMbyrXXJyye6RhQ96ciCUrYd7uggWXjA8joGKaBFRRiV6ULucQzZltSuxjGiXtJXGNXmfEebDivuOkoRCze0gY_OlveBFjIT"/>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Catalog Section -->
+<section class="py-32 bg-[#0C0C0C]" id="catalogo">
+<div class="container max-w-[1200px] mx-auto px-6">
+<div class="text-center max-w-2xl mx-auto mb-16 animate-fadeInUp opacity-0">
+<span class="text-xs font-bold tracking-[0.3em] uppercase text-burnished-gold mb-4 block">Nuestro Legado</span>
+<h2 class="serif-heading text-4xl md:text-5xl font-medium text-soft-cream mb-6">Descubre nuestra selección</h2>
+<p class="text-white/50 leading-relaxed">Una curaduría de las mejores bebidas y espacios pensados para elevar tu experiencia diaria.</p>
+</div>
+<div class="flex justify-center gap-3 mb-16 overflow-x-auto pb-4 no-scrollbar">
+<button class="px-6 py-2 rounded-full glass-card text-xs font-bold tracking-widest uppercase border-burnished-gold/50 text-burnished-gold">Todos</button>
+<button class="px-6 py-2 rounded-full glass-card text-xs font-bold tracking-widest uppercase text-white/60 hover:text-white transition-colors">Bebidas</button>
+<button class="px-6 py-2 rounded-full glass-card text-xs font-bold tracking-widest uppercase text-white/60 hover:text-white transition-colors">Alimentos</button>
+<button class="px-6 py-2 rounded-full glass-card text-xs font-bold tracking-widest uppercase text-white/60 hover:text-white transition-colors">Coworking</button>
+</div>
+<div class="grid md:grid-cols-3 gap-8">
+<!-- Product Card 1 -->
+<article class="group relative animate-fadeInUp opacity-0 delay-1">
+<div class="relative aspect-[4/5] rounded-2xl overflow-hidden border border-white/5 mb-6">
+<img alt="Espresso" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDB83O2O8zPhL2lHvpjkNYJKOCOImDVxmiv7bok0XN2cvCdu-nQoDR0sjUoee949xZOxugB82Tpq0N0s0Kq1KvtQXJ46QA04-47djdcdMqf8sQvn1mqVUJi-RLR6qre6r8tLCsVrP-84nu8q5BPzPe4zNJiaycJ3EySvaiSiXFwZkAJ0afU_WN9mLQRnNrRBp1YVlnXGdm4iM5YWvDWcfNYx7YLa-8_DohSALPI_lUUdta6DHNYc4nlKZnUmK5t0L7wv0CsxHPZse8q"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
+<button class="w-full py-3 bg-white text-primary font-bold rounded-xl text-sm">Añadir al pedido</button>
+</div>
+</div>
+<div class="flex justify-between items-start">
+<div>
+<h3 class="serif-heading text-xl font-medium text-soft-cream mb-1">Espresso Tradicional</h3>
+<p class="text-xs text-white/40 uppercase tracking-widest">Bebida Caliente</p>
+</div>
+<span class="serif-heading text-lg text-burnished-gold font-medium">$3.500</span>
+</div>
+</article>
+<!-- Product Card 2 -->
+<article class="group relative animate-fadeInUp opacity-0 delay-2">
+<div class="relative aspect-[4/5] rounded-2xl overflow-hidden border border-white/5 mb-6">
+<img alt="Capuchino" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCtcbP3OwltLwvZSpbfeWzSKs7VWaF3jRUMILFZcXivB1wKZQPJl5kCynWtGcdOJh5hOYdOI7BEbbhDNjmPgHLSMH__grrtpEAbfoWGczO_2S1-eazN_Au_-0OLni1ACAUrVcL9rl3-cBqC2SzXJervwbg3rh9oKyztyAH3UaWU73cF9Lyeq_bkCecnpFMpAJyYSNB-rsALFT8i942WmPfty-EDBgJypGH5r8gL6w1AlM9OmK-n4frSnhwB-jd71XJKpOO6C-5zqEr-"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
+<button class="w-full py-3 bg-white text-primary font-bold rounded-xl text-sm">Añadir al pedido</button>
+</div>
+</div>
+<div class="flex justify-between items-start">
+<div>
+<h3 class="serif-heading text-xl font-medium text-soft-cream mb-1">Capuchino Cremoso</h3>
+<p class="text-xs text-white/40 uppercase tracking-widest">Bebida Caliente</p>
+</div>
+<span class="serif-heading text-lg text-burnished-gold font-medium">$5.000</span>
+</div>
+</article>
+<!-- Product Card 3 (Coworking) -->
+<article class="group relative animate-fadeInUp opacity-0 delay-3" id="coworking">
+<div class="relative aspect-[4/5] rounded-2xl overflow-hidden border border-white/5 mb-6">
+<img alt="Coworking Space" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBSMJ2_CN0hepYAGbX6-EpeTE2-DI1Iy5a9lw2sHr90z4jo1gRCUx4u_Lr4NqNvo6fKdDSUWOQOtesVSfnntaJLAtIFAVzBQ86nhVt3DGBAvy-QkCY-5rCNDo1Jf0sY177qp-rKfoGyM7dt1Jisg5Ud3680JffQakdrV2uqLsUmiEmWrEXehYoIt7Yac14Ap1ZTFT-4B2LCZpMQ01UBLrPqr4XREMm_pPpZPdi1_heiy8VCcxN8ZGX4KvAAArcZsh4xSpEQ3mBiN-ZN"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
+<button class="w-full py-3 bg-white text-primary font-bold rounded-xl text-sm">Reservar Espacio</button>
+</div>
+</div>
+<div class="flex justify-between items-start">
+<div>
+<h3 class="serif-heading text-xl font-medium text-soft-cream mb-1">Puesto Individual</h3>
+<p class="text-xs text-white/40 uppercase tracking-widest">Espacio de Trabajo</p>
+</div>
+<span class="serif-heading text-lg text-burnished-gold font-medium">$12.000 <span class="text-sm text-white/30">/h</span></span>
+</div>
+</article>
+</div>
+</div>
+</section>
+<!-- Contact Section -->
+<section class="py-32 relative overflow-hidden" id="contacto">
+<div class="absolute inset-0 opacity-10 pointer-events-none">
+<div class="absolute bottom-0 left-0 w-full h-full bg-gradient-to-t from-burnished-gold/20 to-transparent"></div>
+</div>
+<div class="container max-w-[1200px] mx-auto px-6 relative z-10">
+<div class="grid lg:grid-cols-2 gap-20 items-center">
+<div>
+<span class="text-xs font-bold tracking-[0.3em] uppercase text-burnished-gold mb-4 block">Hablemos</span>
+<h2 class="serif-heading text-5xl md:text-6xl font-medium text-soft-cream mb-8">Escríbenos y reserva tu momento</h2>
+<p class="text-white/60 text-lg font-light leading-relaxed mb-12">¿Tienes dudas sobre nuestros planes de coworking o quieres organizar un evento privado? Nuestro equipo está listo para ayudarte.</p>
+<div class="grid grid-cols-2 gap-6">
+<div class="glass-card p-6 rounded-2xl border-white/5">
+<span class="material-symbols-outlined text-burnished-gold mb-4">location_on</span>
+<h4 class="font-bold text-soft-cream mb-1">Dirección</h4>
+<p class="text-sm text-white/50">San Agustín, Huila</p>
+</div>
+<div class="glass-card p-6 rounded-2xl border-white/5">
+<span class="material-symbols-outlined text-burnished-gold mb-4">schedule</span>
+<h4 class="font-bold text-soft-cream mb-1">Horario</h4>
+<p class="text-sm text-white/50">8:00 AM - 9:00 PM</p>
+</div>
+</div>
+</div>
+<div class="glass-card p-10 md:p-12 rounded-3xl border-white/10 relative">
+<div class="absolute -top-6 -right-6 w-12 h-12 rounded-full bg-burnished-gold/20 backdrop-blur-xl border border-white/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-burnished-gold">mail</span>
+</div>
+<form class="space-y-6">
+<div>
+<label class="block text-xs font-bold tracking-widest uppercase text-white/40 mb-3" for="name">Nombre Completo</label>
+<input class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-burnished-gold transition-colors placeholder-white/10" id="name" placeholder="Ej. Juan Pérez" type="text"/>
+</div>
+<div>
+<label class="block text-xs font-bold tracking-widest uppercase text-white/40 mb-3" for="email">Correo Electrónico</label>
+<input class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-burnished-gold transition-colors placeholder-white/10" id="email" placeholder="juan@ejemplo.com" type="email"/>
+</div>
+<div>
+<label class="block text-xs font-bold tracking-widest uppercase text-white/40 mb-3" for="msg">Mensaje</label>
+<textarea class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-burnished-gold transition-colors placeholder-white/10" id="msg" placeholder="¿En qué podemos ayudarte?" rows="4"></textarea>
+</div>
+<button class="w-full py-5 bg-burnished-gold text-primary font-bold rounded-xl hover:bg-tertiary-fixed transition-all duration-300 shadow-xl shadow-burnished-gold/10" type="submit">
+                                Enviar Mensaje
+                            </button>
+</form>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-black py-16 border-t border-white/5">
+<div class="container max-w-[1200px] mx-auto px-6">
+<div class="flex flex-col md:flex-row justify-between items-center gap-10">
+<div class="text-center md:text-left">
+<div class="serif-heading text-2xl font-medium tracking-widest text-soft-cream mb-4">TRÉBOL CAFÉ</div>
+<p class="text-white/30 text-sm max-w-xs">Elevando la cultura del café y el trabajo colaborativo en el corazón de Huila.</p>
+</div>
+<div class="flex gap-8">
+<a class="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/5 hover:border-burnished-gold transition-all text-white/50 hover:text-burnished-gold" href="#">
+<svg class="w-5 h-5 fill-current" viewbox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 1.366.062 2.633.332 3.608 1.308.975.975 1.246 2.242 1.308 3.608.058 1.266.07 1.646.07 4.85s-.012 3.584-.07 4.85c-.062 1.366-.332 2.633-1.308 3.608-.975.975-2.242 1.246-3.608 1.308-1.266.058-1.646.07-4.85.07s-3.584-.012-4.85-.07c-1.366-.062-2.633-.332-3.608-1.308-.975-.975-1.246-2.242-1.308-3.608-.058-1.266-.07-1.646-.07-4.85s.012-3.584.07-4.85c.062-1.366.332-2.633 1.308-3.608.975-.975 2.242-1.246 3.608-1.308 1.266-.058 1.646-.07 4.85-.07zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12s.014 3.667.072 4.947c.2 4.353 2.62 6.777 6.978 6.978 1.28.058 1.688.072 4.947.072s3.667-.014 4.947-.072c4.354-.2 6.782-2.618 6.979-6.98.058-1.28.072-1.689.072-4.948s-.014-3.667-.072-4.947c-.196-4.354-2.617-6.78-6.979-6.98C15.667.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"></path></svg>
+</a>
+<a class="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/5 hover:border-burnished-gold transition-all text-white/50 hover:text-burnished-gold" href="#">
+<svg class="w-5 h-5 fill-current" viewbox="0 0 24 24"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.84 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"></path></svg>
+</a>
+</div>
+</div>
+<div class="mt-16 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
+<p class="text-xs text-white/20">© 2026 Trébol Café. Todos los derechos reservados.</p>
+<div class="flex gap-6">
+<a class="text-xs text-white/20 hover:text-white transition-colors" href="#">Privacidad</a>
+<a class="text-xs text-white/20 hover:text-white transition-colors" href="#">Términos</a>
+</div>
+</div>
+</div>
+</footer>
+<script>
+        // Simple scroll reveal
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate-fadeInUp');
+                    entry.target.style.opacity = '1';
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.opacity-0').forEach(el => observer.observe(el));
+    </script>
+</body></html>

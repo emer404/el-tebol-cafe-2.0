@@ -1,12 +1,143 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Menu as MenuIcon, X, Coffee, Laptop, Wifi, MapPin, Mail, Phone, Calendar, 
   ShoppingBag, Trash2, Plus, Minus, ArrowRight, CheckCircle2, 
-  Sparkles, Globe, Eye, Ticket, Star, ChevronLeft, ChevronRight, Share2, Info, Check, Clock
+  Sparkles, Globe, Eye, Ticket, ChevronLeft, ChevronRight, Share2, Info, Check, Clock,
+  Users
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Category, MenuItem, CartItem, CoworkingBooking, ContactMessage } from './types';
 import { MENU_ITEMS } from './data';
+
+// ── WEB AUDIO SYNTHESIZER ──
+class AmbientSynth {
+  ctx: AudioContext | null = null;
+  gain: GainNode | null = null;
+  oscillators: OscillatorNode[] = [];
+  noiseGain: GainNode | null = null;
+
+  start() {
+    try {
+      this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      this.gain = this.ctx.createGain();
+      this.gain.gain.setValueAtTime(0, this.ctx.currentTime);
+      this.gain.gain.linearRampToValueAtTime(0.3, this.ctx.currentTime + 2.5); // Warm fade-in
+      this.gain.connect(this.ctx.destination);
+
+      // 1. Cafe Ambient Rumbling/Breeze Noise
+      const bufferSize = this.ctx.sampleRate * 2;
+      const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const output = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        output[i] = Math.random() * 2 - 1;
+      }
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = noiseBuffer;
+      noise.loop = true;
+
+      const noiseFilter = this.ctx.createBiquadFilter();
+      noiseFilter.type = 'lowpass';
+      noiseFilter.frequency.value = 180; // Extra cozy low-frequency hum
+      noiseFilter.Q.value = 1.0;
+
+      this.noiseGain = this.ctx.createGain();
+      this.noiseGain.gain.value = 0.12;
+
+      noise.connect(noiseFilter);
+      noiseFilter.connect(this.noiseGain);
+      this.noiseGain.connect(this.gain);
+      noise.start();
+
+      // Slow wind modulation
+      const oscLfo = this.ctx.createOscillator();
+      const lfoGain = this.ctx.createGain();
+      oscLfo.frequency.value = 0.08; // Sweeps every ~12 seconds
+      lfoGain.gain.value = 50; 
+      oscLfo.connect(lfoGain);
+      lfoGain.connect(noiseFilter.frequency);
+      oscLfo.start();
+
+      // 2. Specialty Coffee Chords (Pentatonic E-major/C#-minor lush chords)
+      const freqs = [164.81, 220.00, 277.18, 329.63, 440.00]; // E3, A3, C#4, E4, A4
+      freqs.forEach((freq, idx) => {
+        if (!this.ctx || !this.gain) return;
+        const osc = this.ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+
+        const oscGain = this.ctx.createGain();
+        oscGain.gain.value = 0.04;
+
+        // organic volume breathing
+        const oscLfo = this.ctx.createOscillator();
+        const lfoGain = this.ctx.createGain();
+        oscLfo.frequency.value = 0.05 + idx * 0.015;
+        lfoGain.gain.value = 0.02;
+        oscLfo.connect(lfoGain);
+        lfoGain.connect(oscGain.gain);
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 600;
+
+        osc.connect(filter);
+        filter.connect(oscGain);
+        oscGain.connect(this.gain);
+
+        osc.start();
+        oscLfo.start();
+
+        this.oscillators.push(osc, oscLfo);
+      });
+
+    } catch (err) {
+      console.warn("Failed to initialize AmbientSynth:", err);
+    }
+  }
+
+  stop() {
+    if (this.gain && this.ctx) {
+      try {
+        const curTime = this.ctx.currentTime;
+        this.gain.gain.cancelScheduledValues(curTime);
+        this.gain.gain.setValueAtTime(this.gain.gain.value, curTime);
+        this.gain.gain.linearRampToValueAtTime(0, curTime + 0.5);
+        setTimeout(() => {
+          this.oscillators.forEach(osc => {
+            try { osc.stop(); } catch (e) {}
+          });
+          if (this.ctx) {
+            this.ctx.close();
+          }
+        }, 600);
+      } catch (e) {
+        console.warn("Failed to stop AmbientSynth:", e);
+      }
+    }
+  }
+}
+
+// ── CUSTOM CHIME MICRO-INTERACTION ──
+export function playChime() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.type = 'sine';
+    // Gentle golden organic wooden/brass chime tone
+    osc.frequency.setValueAtTime(659.25, ctx.currentTime); // E5
+    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.08); // slide to A5
+    
+    gain.gain.setValueAtTime(0.03, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.3); // fade out
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.3);
+  } catch (e) {}
+}
 
 export default function App() {
   // Locale State
@@ -14,6 +145,9 @@ export default function App() {
   
   // Mobile menu toggle
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  // Mobile actions menu toggle
+  const [mobileActionsOpen, setMobileActionsOpen] = useState(false);
   
   // Shopping Cart state
   const [cartOpen, setCartOpen] = useState(false);
@@ -24,21 +158,9 @@ export default function App() {
   
   // Product Detail Modal
   const [selectedProduct, setSelectedProduct] = useState<MenuItem | null>(null);
-  const [productCustomization, setProductCustomization] = useState({
-    milk: 'sin-lácteos', // 'sin-lácteos', 'entera', 'almendra', 'avena'
-    sweetness: 'normal', // 'sin-azúcar', 'medio', 'normal'
-    notes: ''
-  });
 
-  // Booking and Form States
-  const [activeTab, setActiveTab] = useState<'booking' | 'contact'>('booking');
-  const [bookingForm, setBookingForm] = useState({
-    fullName: '',
-    email: '',
-    workspaceType: 'Escritorio Flexible' as CoworkingBooking['workspaceType'],
-    date: '',
-    slot: 'Día Completo'
-  });
+
+  // Contact Form State
   const [contactForm, setContactForm] = useState({
     fullName: '',
     email: '',
@@ -46,15 +168,8 @@ export default function App() {
     message: ''
   });
   
-  // History lists stored in localStorage
-  const [bookings, setBookings] = useState<CoworkingBooking[]>([]);
-  const [messages, setMessages] = useState<ContactMessage[]>([]);
-  
   // Interface alerts and toast messages
   const [toasts, setToasts] = useState<{ id: string; message: string; type: 'success' | 'info' }[]>([]);
-  
-  // Loyalty Hub Open
-  const [loyaltyHubOpen, setLoyaltyHubOpen] = useState(false);
 
   // Active Map Route Guide Details
   const [currentMapRoute, setCurrentMapRoute] = useState<'centro' | 'arqueologico' | 'pitalito'>('centro');
@@ -63,27 +178,68 @@ export default function App() {
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [isSubscribed, setIsSubscribed] = useState(false);
 
-  // Custom feedback/review system for the coffee types
-  const [reviews, setReviews] = useState<{ [key: string]: { rating: number; count: number } }>({
-    'torta-vasca': { rating: 4.9, count: 48 },
-    'margarita-bosque': { rating: 4.8, count: 32 },
-    'capuchino-artesanal': { rating: 5.0, count: 124 },
-    'pase-diario-coworking': { rating: 4.7, count: 56 },
-    'espresso-filtrado': { rating: 4.9, count: 87 },
-  });
-  
-  const [userRating, setUserRating] = useState<{ productId: string; rating: number } | null>(null);
 
-  // Soundscape ambient audio player simulation
+
+  // Soundscape ambient audio player
   const [ambientAudio, setAmbientAudio] = useState(false);
 
-  // Load bookings and messages from localStorage on mount
+  // Parallax offset state for background floating decorations
+  const [parallaxOffset, setParallaxOffset] = useState({ x: 0, y: 0 });
+
+  // Life-cycle management for AmbientSynth
+  const synthRef = useRef<AmbientSynth | null>(null);
   useEffect(() => {
-    const savedBookings = localStorage.getItem('trebol_bookings');
-    const savedMessages = localStorage.getItem('trebol_messages');
-    if (savedBookings) setBookings(JSON.parse(savedBookings));
-    if (savedMessages) setMessages(JSON.parse(savedMessages));
+    if (ambientAudio) {
+      if (!synthRef.current) {
+        synthRef.current = new AmbientSynth();
+      }
+      synthRef.current.start();
+    } else {
+      if (synthRef.current) {
+        synthRef.current.stop();
+        synthRef.current = null;
+      }
+    }
+    return () => {
+      if (synthRef.current) {
+        synthRef.current.stop();
+        synthRef.current = null;
+      }
+    };
+  }, [ambientAudio]);
+
+  // Mouse movement tracking for parallax background decorations (only on desktop hover devices)
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setParallaxOffset({
+        x: (e.clientX / window.innerWidth - 0.5) * 2,
+        y: (e.clientY / window.innerHeight - 0.5) * 2
+      });
+    };
+    const mediaQuery = window.matchMedia('(hover: hover)');
+    if (mediaQuery.matches) {
+      window.addEventListener('mousemove', handleMouseMove);
+    }
+    return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
+
+  // Global click chime feedback (plays warm tone when clicking links/buttons, only if soundscape is ON)
+  useEffect(() => {
+    const handleGlobalClick = (e: MouseEvent) => {
+      if (!ambientAudio) return;
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === 'BUTTON' || 
+        target.tagName === 'A' || 
+        target.closest('button') || 
+        target.closest('a')
+      ) {
+        playChime();
+      }
+    };
+    window.addEventListener('click', handleGlobalClick);
+    return () => window.removeEventListener('click', handleGlobalClick);
+  }, [ambientAudio]);
 
   // Toast notifier helper
   const notify = (message: string, type: 'success' | 'info' = 'success') => {
@@ -99,7 +255,7 @@ export default function App() {
     es: {
       subtitle: 'CAFÉ DE ORIGEN & COWORKING',
       title: 'Trébol Café',
-      hero_desc: 'En el corazón de San Agustín, fusionamos la pasión por el café de alta especialidad con un entorno diseñado para la productividad y la conexión creativa.',
+      hero_desc: '',
       welcome: 'Bienvenido a',
       location: 'San Agustín, Huila',
       btn_catalog: 'EXPLORAR CATÁLOGO',
@@ -109,14 +265,14 @@ export default function App() {
       esencia_desc: 'Nacimos bajo el apoyo del Fondo Emprender y el SENA con una misión clara: elevar la cultura del café en nuestra región mientras brindamos un refugio para mentes creativas y nómadas digitales.',
       quote: '"Nuestra visión es ser el punto de referencia para el café de origen y el trabajo colaborativo en el sur del Huila."',
       stat_origin: 'Colombiano de Origen',
-      stat_wifi: 'Mbps de Conexión',
+      stat_wifi: 'Horario: de lunes a domingos de 8am a 12pm y 2 a 8pm',
       stat_hours: 'Horario Lunes a Sábado',
       cat_title: 'Nuestra Selección',
-      cat_header: 'Menú Curado',
+      cat_header: 'Menú',
       btn_add: 'AÑADIR',
       btn_reserve: 'RESERVAR',
       contact_title: 'Contáctanos',
-      contact_header: 'Hablemos sobre tu próximo proyecto o reserva.',
+      contact_header: '',
       form_full_name: 'Nombre Completo',
       form_email: 'Correo Electrónico',
       form_workspace: 'Tipo de Espacio',
@@ -127,16 +283,14 @@ export default function App() {
       btn_send_booking: 'Enviar Solicitud',
       btn_send_contact: 'Enviar Mensaje',
       respaldo: 'Con el respaldo institucional de',
-      footer_desc: 'Cultivando excelencia, inspirando trabajo. San Agustín, Huila, Colombia. El hogar del café de especialidad y la productividad.',
+      footer_desc: '',
       links: 'Enlaces',
       newsletter: 'Newsletter',
       newsletter_desc: 'Recibe noticias sobre nuevos lotes de café y eventos de coworking.',
       rights: '© 2024 Trébol Café. Artisanal Workspace & Roastery. Todos los derechos reservados.',
       cart_title: 'Tu Pedido',
       cart_empty: 'Aún no has agregado nada a tu experiencia.',
-      cart_subtotal: 'Subtotal o Depósito',
-      cart_tax: 'Servicio / IVA',
-      cart_total: 'Total Estimado',
+      cart_total: 'Total',
       btn_checkout: 'COMPLETAR PEDIDO / RESERVA',
       toast_add: '¡Producto añadido al carrito!',
       toast_booking_success: '¡Reserva generada con éxito! Revisa tu historial.',
@@ -151,7 +305,7 @@ export default function App() {
     en: {
       subtitle: 'SPECIALTY COFFEE & COWORKING',
       title: 'Trébol Café',
-      hero_desc: 'In the heart of San Agustín, we fuse the passion for high specialty coffee with an environment tailored for productivity and creative connection.',
+      hero_desc: '',
       welcome: 'Welcome to',
       location: 'San Agustín, Huila',
       btn_catalog: 'EXPLORE MENU',
@@ -164,11 +318,11 @@ export default function App() {
       stat_wifi: 'Mbps High-Speed Internet',
       stat_hours: 'Monday to Saturday Hours',
       cat_title: 'Our Selection',
-      cat_header: 'Curated Menu',
+      cat_header: 'Menu',
       btn_add: 'ADD TO CART',
       btn_reserve: 'RESERVE',
       contact_title: 'Contact Us',
-      contact_header: 'Let\'s talk about your next project or reservation.',
+      contact_header: '',
       form_full_name: 'Full Name',
       form_email: 'Email Address',
       form_workspace: 'Workspace Type',
@@ -179,16 +333,14 @@ export default function App() {
       btn_send_booking: 'Book My Workspace',
       btn_send_contact: 'Send Quick Message',
       respaldo: 'Supported institutionally by',
-      footer_desc: 'Cultivating excellence, inspiring workspace. San Agustín, Huila, Colombia. The home of specialty coffee and focused minds.',
+      footer_desc: '',
       links: 'Links',
       newsletter: 'Newsletter',
       newsletter_desc: 'Receive fresh updates on green micro-lots and coworking community events.',
       rights: '© 2024 Trébol Café. Artisanal Workspace & Roastery. All rights reserved.',
       cart_title: 'Your Order & Pass',
       cart_empty: 'Nothing added to your sensory journey yet.',
-      cart_subtotal: 'Subtotal / Deposit',
-      cart_tax: 'Service / VAT',
-      cart_total: 'Estimated Total',
+      cart_total: 'Total',
       btn_checkout: 'FIRM BOOKING & FINALIZE',
       toast_add: 'Item added to your order!',
       toast_booking_success: 'Booking confirmed! Check your History Hub.',
@@ -205,7 +357,16 @@ export default function App() {
   const currentLang = t[lang];
 
   // Helper mapping category filters
-  const filterCategories: Category[] = ['Todos', 'Bebidas Calientes', 'Bebidas Frías', 'Pastelería', 'Coworking'];
+  const filterCategories: Category[] = [
+    'Todos',
+    'Bebidas Calientes',
+    'Bebidas Frías',
+    'Desayunos',
+    'Postres',
+    'Tortas',
+    'Métodos Especialidad',
+    'Coworking',
+  ];
 
   const filteredItems = activeCategory === 'Todos'
     ? MENU_ITEMS
@@ -245,84 +406,38 @@ export default function App() {
 
   // Calculate cart metrics
   const cartSubtotal = cart.reduce((acc, current) => acc + (current.item.price * current.quantity), 0);
-  const cartTax = Math.round(cartSubtotal * 0.08);
-  const cartTotal = cartSubtotal + cartTax;
+  const cartTotal = cartSubtotal;
 
-  // Checkout simulating successful ticket generation
+  // Checkout - redirect to WhatsApp with order details
   const checkoutCartAndPasses = () => {
     if (cart.length === 0) return;
     
-    // Auto-generate some coworking orders or coffee order confirmations based on content
-    const containsCoworking = cart.find(c => c.item.category === 'Coworking');
+    // Generate WhatsApp message with order details
+    const orderItems = cart.map(c => 
+      `${c.quantity}x ${c.item.title} - $${(c.item.price * c.quantity).toLocaleString()}`
+    ).join('\n');
     
-    const newBooking: CoworkingBooking = {
-      id: Math.random().toString(36).substr(2, 9).toUpperCase(),
-      fullName: bookingForm.fullName || 'Invitado Especial Premium',
-      email: bookingForm.email || 'guest@trebolcafe.co',
-      workspaceType: containsCoworking ? (containsCoworking.item.title as any) : 'Escritorio Flexible',
-      date: bookingForm.date || new Date().toISOString().split('T')[0],
-      slot: 'Día Completo (8:00 - 19:00)',
-      price: cartTotal,
-      code: `TRB-${Math.floor(10000 + Math.random() * 90000)}`
-    };
-
-    const updatedBookings = [newBooking, ...bookings];
-    setBookings(updatedBookings);
-    localStorage.setItem('trebol_bookings', JSON.stringify(updatedBookings));
-
-    notify(`${currentLang.toast_booking_success}`, 'success');
+    const message = [
+      'Hola Trébol Café, quiero realizar el siguiente pedido:',
+      '',
+      '📋 *DETALLE DEL PEDIDO*',
+      orderItems,
+      '',
+      `💵 *Total:* $${cartSubtotal.toLocaleString()}`,
+      '',
+      '¿Podrían confirmar mi pedido?'
+    ].join('\n');
+    
+    // Redirect to WhatsApp
+    window.open(`https://wa.me/573213298852?text=${encodeURIComponent(message)}`, '_blank');
+    
+    // Clear cart after sending to WhatsApp
     setCart([]);
     setCartOpen(false);
-    setLoyaltyHubOpen(true); // Open the tickets view so they can see it!
+    notify(lang === 'es' ? '¡Redirigiendo a WhatsApp con tu pedido!' : 'Redirecting to WhatsApp with your order!', 'success');
   };
 
-  // Submit direct Booking Form
-  const handleBookingSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!bookingForm.fullName || !bookingForm.email || !bookingForm.date) {
-      notify(lang === 'es' ? 'Por favor completa todos los campos' : 'Please complete all required fields', 'info');
-      return;
-    }
-
-    const priceMap = {
-      'Escritorio Flexible': 25000,
-      'Escritorio Dedicado': 35000,
-      'Sala de Reunión': 40000,
-      'Oficina Privada': 60000,
-    };
-
-    const price = priceMap[bookingForm.workspaceType] || 25000;
-
-    const newBooking: CoworkingBooking = {
-      id: Math.random().toString(36).substr(2, 9).toUpperCase(),
-      fullName: bookingForm.fullName,
-      email: bookingForm.email,
-      workspaceType: bookingForm.workspaceType,
-      date: bookingForm.date,
-      slot: bookingForm.slot,
-      price: price,
-      code: `TRB-${Math.floor(10000 + Math.random() * 90000)}`
-    };
-
-    const updatedBookings = [newBooking, ...bookings];
-    setBookings(updatedBookings);
-    localStorage.setItem('trebol_bookings', JSON.stringify(updatedBookings));
-
-    notify(currentLang.toast_booking_success, 'success');
-    
-    // Clear form
-    setBookingForm({
-      fullName: '',
-      email: '',
-      workspaceType: 'Escritorio Flexible',
-      date: '',
-      slot: 'Día Completo'
-    });
-    
-    setLoyaltyHubOpen(true); // Open tickets panel to display receipt
-  };
-
-  // Submit contact message form
+  // Submit contact message form - send to WhatsApp
   const handleContactSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!contactForm.fullName || !contactForm.email || !contactForm.message) {
@@ -330,20 +445,20 @@ export default function App() {
       return;
     }
 
-    const newMessage: ContactMessage = {
-      id: Math.random().toString(36).substr(2, 9).toUpperCase(),
-      fullName: contactForm.fullName,
-      email: contactForm.email,
-      interest: contactForm.interest,
-      message: contactForm.message,
-      date: new Date().toLocaleDateString()
-    };
+    const message = [
+      'Hola Trébol Café,',
+      '',
+      `👤 *Nombre:* ${contactForm.fullName}`,
+      `📧 *Email:* ${contactForm.email}`,
+      `📋 *Interés:* ${contactForm.interest}`,
+      '',
+      `💬 *Mensaje:*`,
+      contactForm.message
+    ].join('\n');
 
-    const updatedMessages = [newMessage, ...messages];
-    setMessages(updatedMessages);
-    localStorage.setItem('trebol_messages', JSON.stringify(updatedMessages));
+    window.open(`https://wa.me/573213298852?text=${encodeURIComponent(message)}`, '_blank');
 
-    notify(currentLang.toast_contact_success, 'success');
+    notify(lang === 'es' ? '¡Redirigiendo a WhatsApp con tu mensaje!' : 'Redirecting to WhatsApp with your message!', 'success');
 
     // Clear form
     setContactForm({
@@ -363,32 +478,9 @@ export default function App() {
     setNewsletterEmail('');
   };
 
-  // Handle Stars / Rating addition
-  const handleProductRating = (productId: string, rating: number) => {
-    setReviews((prev) => {
-      const prevRating = prev[productId]?.rating || 5.0;
-      const prevCount = prev[productId]?.count || 10;
-      const newCount = prevCount + 1;
-      const newRating = parseFloat(((prevRating * prevCount + rating) / newCount).toFixed(1));
-      return {
-        ...prev,
-        [productId]: { rating: newRating, count: newCount }
-      };
-    });
-    setUserRating({ productId, rating });
-    notify(lang === 'es' ? '¡Gracias por calificar nuestro lote!' : 'Thank you for rating our artisanal batch!', 'success');
-  };
-
-  // Clear booking history item
-  const cancelBooking = (id: string) => {
-    const updated = bookings.filter((b) => b.id !== id);
-    setBookings(updated);
-    localStorage.setItem('trebol_bookings', JSON.stringify(updated));
-    notify(lang === 'es' ? 'Reserva eliminada de tus registros' : 'Reservation removed from records', 'info');
-  };
 
   return (
-    <div className="bg-[#0A0A0A] text-[#FAFAF8] min-h-screen relative font-sans overflow-x-hidden selection:bg-primary/30 selection:text-primary">
+    <div className="bg-[#0A0A0A] text-[#FAFAF8] min-h-screen relative font-sans-modern overflow-x-hidden selection:bg-primary/30 selection:text-primary">
       
       {/* Toast Notifier */}
       <div className="fixed top-24 right-6 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
@@ -414,8 +506,8 @@ export default function App() {
         </AnimatePresence>
       </div>
 
-      {/* Floating Coffee Ambient Noise Controller */}
-      <div className="fixed bottom-6 left-6 z-40">
+      {/* Floating Coffee Ambient Noise Controller - Desktop only */}
+      <div className="hidden sm:flex fixed bottom-6 left-6 z-40 sm:bottom-8 sm:left-8">
         <div className="bg-bg-elevated/95 backdrop-blur-md px-4 py-2 border border-border-subtle rounded-full flex items-center gap-2 shadow-lg">
           <motion.button 
             whileHover={{ scale: 1.1 }}
@@ -424,8 +516,8 @@ export default function App() {
               setAmbientAudio(!ambientAudio);
               notify(
                 lang === 'es' 
-                  ? (ambientAudio ? 'Música ambiental apagada' : 'Simulación de audio ambiental iniciada (Café Jazz)') 
-                  : (ambientAudio ? 'Soundscape off' : 'Ambient soundscape simulation loaded (Cafe Jazz)'), 
+                  ? (ambientAudio ? 'Música ambiental apagada' : 'Paisaje sonoro de cafetería activado (Sintetizador Web)') 
+                  : (ambientAudio ? 'Soundscape off' : 'Cozy ambient soundscape activated (Web Synthesizer)'), 
                 'info'
               );
             }}
@@ -437,7 +529,7 @@ export default function App() {
           >
             <Coffee size={14} className={ambientAudio ? 'animate-bounce' : ''} />
           </motion.button>
-          <span className="text-xs text-text-muted font-mono tracking-wider hidden sm:inline">
+          <span className="text-xs text-text-muted font-mono tracking-wider">
             {ambientAudio ? 'SOUNDSCAPE: ON' : 'SOUNDSCAPE: OFF'}
           </span>
           {ambientAudio && (
@@ -452,7 +544,7 @@ export default function App() {
       </div>
 
       {/* Header */}
-      <header className="fixed top-0 w-full z-45 bg-[#0A0A0A]/90 backdrop-blur-md border-b border-white/10">
+      <header className="fixed top-0 w-full z-50 bg-[#0A0A0A]/90 backdrop-blur-md border-b border-white/10">
         <nav className="flex justify-between items-center px-12 py-6 max-w-7xl mx-auto">
           
           {/* Logo */}
@@ -464,8 +556,8 @@ export default function App() {
                 className="w-full h-full object-cover"
               />
             </div>
-            <span className="font-sans text-xl font-black tracking-tighter uppercase text-primary">
-              TRÉBOL <span className="text-sm font-sans tracking-widest text-[#F5F5F5]">CAFÉ</span>
+            <span className="font-serif-display text-xl font-black tracking-tighter uppercase text-primary">
+              TRÉBOL <span className="text-sm font-sans-modern tracking-widest text-[#F5F5F5]">CAFÉ</span>
             </span>
           </a>
 
@@ -474,10 +566,6 @@ export default function App() {
             <a href="#inicio" className="relative text-primary hover:text-[#F2DEAA] transition-colors group py-1">
               {lang === 'es' ? 'Inicio' : 'Home'}
               <span className="absolute bottom-0 left-0 w-full h-[1px] bg-[#C9A84C]"></span>
-            </a>
-            <a href="#nosotros" className="relative text-white/60 hover:text-primary transition-colors group py-1">
-              {lang === 'es' ? 'Nosotros' : 'About'}
-              <span className="absolute bottom-0 left-0 w-0 h-[1px] bg-[#C9A84C] transition-all duration-300 group-hover:w-full"></span>
             </a>
             <a href="#catalogo" className="relative text-white/60 hover:text-primary transition-colors group py-1">
               {lang === 'es' ? 'Catálogo' : 'Menu'}
@@ -493,58 +581,127 @@ export default function App() {
             </a>
           </div>
 
-          {/* Actions: Languages, Booking History, Shopping Cart */}
+          {/* Actions: Languages, Shopping Cart */}
           <div className="flex items-center gap-4">
             
-            {/* Language Selection Toggle */}
-            <motion.button 
-              whileHover={{ scale: 1.08 }}
-              whileTap={{ scale: 0.92 }}
-              onClick={() => {
-                setLang(lang === 'es' ? 'en' : 'es');
-                notify(lang === 'es' ? 'Language switched to English' : 'Idioma cambiado a Español', 'info');
-              }}
-              className="text-primary hover:text-[#F2DEAA] p-2 rounded hover:bg-white/5 transition-colors flex items-center gap-1.5"
-              title="Change Language"
-              id="lang_switch_btn"
-            >
-              <Globe size={18} />
-              <span className="text-xs font-mono font-bold tracking-widest">{lang.toUpperCase()}</span>
-            </motion.button>
+            {/* Desktop Actions */}
+            <div className="hidden md:flex items-center gap-4">
+              {/* Language Selection Toggle */}
+              <motion.button 
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.92 }}
+                onClick={() => {
+                  setLang(lang === 'es' ? 'en' : 'es');
+                  notify(lang === 'es' ? 'Language switched to English' : 'Idioma cambiado a Español', 'info');
+                }}
+                className="text-primary hover:text-[#F2DEAA] p-2 rounded hover:bg-white/5 transition-colors flex items-center gap-1.5"
+                title="Change Language"
+                id="lang_switch_btn"
+              >
+                <Globe size={18} />
+                <span className="text-xs font-mono font-bold tracking-widest">{lang.toUpperCase()}</span>
+              </motion.button>
 
-            {/* Passes/Booking History Icon */}
-            <motion.button 
-              whileHover={{ scale: 1.08 }}
-              whileTap={{ scale: 0.92 }}
-              onClick={() => setLoyaltyHubOpen(true)}
-              className="relative p-2 rounded hover:bg-white/5 text-[#F5F5F5] hover:text-primary transition-colors"
-              title="My Bookings History"
-              id="history_hub_btn"
-            >
-              <Ticket size={20} />
-              {bookings.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-primary text-black font-mono text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center animate-pulse">
-                  {bookings.length}
-                </span>
-              )}
-            </motion.button>
+              {/* Shopping Cart button */}
+              <motion.button 
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setCartOpen(true)}
+                className="p-2 py-1.5 border border-white/20 text-[10px] uppercase tracking-widest cursor-pointer hover:bg-primary hover:text-black transition-all flex items-center gap-2 shrink-0 h-10"
+                title="View Cart"
+                id="cart_toggle_btn"
+              >
+                <ShoppingBag size={15} />
+                {cart.length > 0 && (
+                  <span className="bg-primary text-black font-mono text-xs font-black min-w-5 h-5 px-1 rounded flex items-center justify-center border border-[#0A0A0A]">
+                    {cart.reduce((ac, x) => ac + x.quantity, 0)}
+                  </span>
+                )}
+              </motion.button>
+            </div>
 
-            {/* Shopping Cart button */}
-            <motion.button 
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setCartOpen(true)}
-              className="p-2 py-1.5 border border-white/20 text-[10px] uppercase tracking-widest cursor-pointer hover:bg-primary hover:text-black transition-all flex items-center gap-2 shrink-0 h-10"
-              title="View Cart"
-              id="cart_toggle_btn"
-            >
-              <ShoppingBag size={15} />
-              {cart.length > 0 && (
-                <span className="bg-primary text-black font-mono text-xs font-black min-w-5 h-5 px-1 rounded flex items-center justify-center border border-[#0A0A0A]">
-                  {cart.reduce((ac, x) => ac + x.quantity, 0)}
-                </span>
-              )}
-            </motion.button>
+            {/* Mobile Actions Menu */}
+            <div className="md:hidden relative">
+              <motion.button 
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.92 }}
+                onClick={() => setMobileActionsOpen(!mobileActionsOpen)}
+                className="text-primary p-2"
+                id="mobile_actions_btn"
+              >
+                <ShoppingBag size={20} />
+                {cart.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-primary text-black font-mono text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center animate-pulse">
+                    {cart.reduce((ac, x) => ac + x.quantity, 0)}
+                  </span>
+                )}
+              </motion.button>
+
+              {/* Mobile Actions Dropdown */}
+              <AnimatePresence>
+                {mobileActionsOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                    className="absolute right-0 top-full mt-2 bg-[#0A0A0A] border border-white/10 rounded-xl shadow-2xl py-2 min-w-[160px] z-50"
+                  >
+                    {/* Language Toggle */}
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => {
+                        setLang(lang === 'es' ? 'en' : 'es');
+                        notify(lang === 'es' ? 'Language switched to English' : 'Idioma cambiado a Español', 'info');
+                        setMobileActionsOpen(false);
+                      }}
+                      className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-white/5 transition-colors"
+                    >
+                      <Globe size={16} />
+                      <span className="text-sm text-white/80">{lang === 'es' ? 'English' : 'Español'}</span>
+                    </motion.button>
+
+                    {/* Cart */}
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => {
+                        setCartOpen(true);
+                        setMobileActionsOpen(false);
+                      }}
+                      className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-white/5 transition-colors"
+                    >
+                      <ShoppingBag size={16} />
+                      <span className="text-sm text-white/80">{lang === 'es' ? 'Carrito' : 'Cart'}</span>
+                      {cart.length > 0 && (
+                        <span className="ml-auto bg-primary text-black font-mono text-xs font-black px-2 py-0.5 rounded">
+                          {cart.reduce((ac, x) => ac + x.quantity, 0)}
+                        </span>
+                      )}
+                    </motion.button>
+
+                    {/* Soundscape (Mobile) */}
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => {
+                        setAmbientAudio(!ambientAudio);
+                        notify(
+                          lang === 'es' 
+                            ? (ambientAudio ? 'Música ambiental apagada' : 'Paisaje sonoro de cafetería activado (Sintetizador Web)') 
+                            : (ambientAudio ? 'Soundscape off' : 'Cozy ambient soundscape activated (Web Synthesizer)'), 
+                          'info'
+                        );
+                        setMobileActionsOpen(false);
+                      }}
+                      className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-white/5 transition-colors"
+                    >
+                      <Coffee size={16} className={ambientAudio ? 'animate-bounce text-primary' : ''} />
+                      <span className="text-sm text-white/80">
+                        {ambientAudio ? 'Soundscape: ON' : 'Soundscape: OFF'}
+                      </span>
+                    </motion.button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
             <motion.button 
               whileHover={{ scale: 1.08 }}
@@ -558,32 +715,20 @@ export default function App() {
           </div>
         </nav>
 
-        {/* Mobile menu panel */}
-        <AnimatePresence>
-          {mobileMenuOpen && (
-            <motion.div 
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="md:hidden bg-[#111111] border-t border-white/10"
-            >
-              <div className="flex flex-col p-6 space-y-4 text-center">
-                <a href="#inicio" onClick={() => setMobileMenuOpen(false)} className="py-2 tracking-widest text-[#F5F5F5] hover:text-primary transition-colors font-bold uppercase">{currentLang.subtitle}</a>
-                <a href="#nosotros" onClick={() => setMobileMenuOpen(false)} className="py-2 tracking-widest text-[#F5F5F5] hover:text-primary transition-colors">{lang === 'es' ? 'Nosotros' : 'About'}</a>
-                <a href="#catalogo" onClick={() => setMobileMenuOpen(false)} className="py-2 tracking-widest text-[#F5F5F5] hover:text-primary transition-colors">{lang === 'es' ? 'Catálogo / Menú' : 'Menu & Coffee'}</a>
-                <a href="#coworking" onClick={() => setMobileMenuOpen(false)} className="py-2 tracking-widest text-[#F5F5F5] hover:text-primary transition-colors">Coworking Space</a>
-                <a href="#contacto" onClick={() => setMobileMenuOpen(false)} className="py-2 tracking-widest text-[#F5F5F5] hover:text-primary transition-colors">{lang === 'es' ? 'Contacto y Reservas' : 'Contact & Reserv.'}</a>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Close mobile actions when clicking outside */}
+        {mobileActionsOpen && (
+          <div 
+            className="fixed inset-0 z-40 md:hidden"
+            onClick={() => setMobileActionsOpen(false)}
+          />
+        )}
       </header>
 
       {/* Main Content */}
       <main className="pt-24">
         
-        {/* Banner Announcement */}
-        <div className="bg-gradient-to-r from-primary/10 via-[#111111] to-primary/10 text-center py-2.5 border-b border-white/10 text-[10px] tracking-[0.25em] font-mono text-primary flex items-center justify-center gap-2 uppercase font-black">
+        {/* Banner Announcement - Desktop only */}
+        <div className="hidden md:flex bg-gradient-to-r from-primary/10 via-[#111111] to-primary/10 text-center py-2.5 border-b border-white/10 text-[10px] tracking-[0.25em] font-mono text-primary items-center justify-center gap-2 uppercase font-black">
           <Sparkles size={12} className="animate-pulse text-[#C9A84C]" />
           {lang === 'es' 
             ? 'CULTIVANDO EXCELENCIA EN EL SUR EN ALIANZA CON SENA & FONDO EMPRENDER' 
@@ -591,457 +736,512 @@ export default function App() {
           <Sparkles size={12} className="animate-pulse text-[#C9A84C]" />
         </div>
 
-        {/* Hero Section */}
-        <section id="inicio" className="relative min-h-[90vh] flex items-center px-12 max-w-7xl mx-auto py-16 overflow-hidden"
-  style={{
-    background: `
-      linear-gradient(90deg, rgba(10, 10, 10, 0.88) 0%, rgba(10, 10, 10, 0.58) 48%, rgba(10, 10, 10, 0.72) 100%),
-      linear-gradient(180deg, rgba(10, 10, 10, 0.12) 0%, #0A0A0A 100%),
-      url("/img/fondo.jpeg") center / cover no-repeat
-    `
-  }}
->
-          
-          {/* Grid overlay background to reinforce standard technical design */}
-          <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
-          <div className="absolute top-1/2 left-1/3 -translate-y-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-primary/10 blur-[130px] rounded-full pointer-events-none"></div>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center w-full z-10">
-            
-            {/* Left columnar text area */}
-            <motion.div 
-              initial={{ opacity: 0, x: -50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ type: 'spring', damping: 20, stiffness: 80 }}
-              className="lg:col-span-6 flex flex-col items-start text-left"
-            >
-              
-              {/* Hero Badge */}
-              <span className="hero-badge">
-                {currentLang.location}
-              </span>
+        {/* ════════════════════════════════════════════════════════════
+             HERO SECTION — Split Layout (texto izq / imagen der)
+             ════════════════════════════════════════════════════════════ */}
+        <section
+          id="inicio"
+          className="hero-split-section relative w-full overflow-hidden flex flex-col"
+          style={{ minHeight: 'calc(100vh - 5.5rem)' }}
+        >
+          {/* ── Imagen de fondo completa (café con bokeh) ── */}
+          <div
+            className="absolute inset-0 z-0"
+            style={{
+              backgroundImage: 'url("/img/hero_bg.png")',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              opacity: 0.55
+            }}
+          />
 
-              <div className="w-24 h-24 rounded-full overflow-hidden border border-[#C9A84C]/30 shadow-[0_0_0_3px_rgba(201,168,76,0.08)] mb-6">
-                <img 
-                  src="/img/logo.jpg" 
-                  alt="Trébol Café Logo" 
-                  className="w-full h-full object-cover"
-                />
+          {/* ── Degradado lateral izquierdo para separar texto ── */}
+          <div className="absolute inset-0 z-0 hero-side-gradient" />
+
+          {/* ── Elementos Decorativos con Parallax (Hojas de trébol / granos de café) ── */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden z-[2]">
+            {/* Parallax item 1: Coffee Bean SVG */}
+            <div 
+              className="absolute top-1/4 left-10 md:left-20 w-8 h-12 text-[#C9A84C]/25 transition-transform duration-300 ease-out"
+              style={{
+                transform: `translate(${parallaxOffset.x * -25}px, ${parallaxOffset.y * -25}px) rotate(${parallaxOffset.x * 20}deg)`
+              }}
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
+                <path d="M12,2C10.5,2 9,3 8,4.5C6,7.5 7,12.5 10,16.5C12,19.2 13.5,20.8 15,20.8C16.5,20.8 18,19.8 19,18.3C21,15.3 20,10.3 17,6.3C15,3.6 13.5,2 12,2M12,3.5C13,3.5 14.1,4.5 15.6,6.5C18.1,9.8 18.9,13.8 17.6,15.7C16.8,17 15.6,17.8 14.7,17.8C13.7,17.8 12.6,16.8 11.1,14.8C8.6,11.5 7.8,7.5 9.1,5.6C9.9,4.3 11.1,3.5 12,3.5Z" />
+              </svg>
+            </div>
+            
+            {/* Parallax item 2: Clover Leaf (Trébol) SVG */}
+            <div 
+              className="absolute bottom-1/3 left-[45%] w-10 h-10 text-[#C9A84C]/20 transition-transform duration-300 ease-out"
+              style={{
+                transform: `translate(${parallaxOffset.x * 35}px, ${parallaxOffset.y * 35}px) rotate(${parallaxOffset.y * -30}deg)`
+              }}
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
+                <path d="M12,9.5C11.3,9.5 10.7,9.2 10.2,8.7C9.7,8.2 9.5,7.6 9.5,6.9C9.5,5.2 10.6,4.1 12,4.1C13.4,4.1 14.5,5.2 14.5,6.9C14.5,7.6 14.3,8.2 13.8,8.7C13.3,9.2 12.7,9.5 12,9.5M12,14.5C11.3,14.5 10.7,14.2 10.2,13.7C9.7,13.2 9.5,12.6 9.5,11.9C9.5,10.2 10.6,9.1 12,9.1C13.4,9.1 14.5,10.2 14.5,11.9C14.5,12.6 14.3,13.2 13.8,13.7C13.3,14.2 12.7,14.5 12,14.5M17,12C17,11.3 16.7,10.7 16.2,10.2C15.7,9.7 15.1,9.5 14.4,9.5C12.7,9.5 11.6,10.6 11.6,12C11.6,13.4 12.7,14.5 14.4,14.5C15.1,14.5 15.7,14.3 16.2,13.8C16.7,13.3 17,12.7 17,12M7,12C7,11.3 6.7,10.7 6.2,10.2C5.7,9.7 5.1,9.5 4.4,9.5C2.7,9.5 1.6,10.6 1.6,12C1.6,13.4 2.7,14.5 4.4,14.5C5.1,14.5 5.7,14.3 6.2,13.8C6.7,13.3 7,12.7 7,12" />
+              </svg>
+            </div>
+
+            {/* Parallax item 3: Coffee Bean SVG */}
+            <div 
+              className="absolute top-1/3 right-[15%] w-12 h-14 text-[#C9A84C]/15 transition-transform duration-300 ease-out"
+              style={{
+                transform: `translate(${parallaxOffset.x * -40}px, ${parallaxOffset.y * -40}px) rotate(${parallaxOffset.x * -15}deg)`
+              }}
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
+                <path d="M12,2C10.5,2 9,3 8,4.5C6,7.5 7,12.5 10,16.5C12,19.2 13.5,20.8 15,20.8C16.5,20.8 18,19.8 19,18.3C21,15.3 20,10.3 17,6.3C15,3.6 13.5,2 12,2M12,3.5C13,3.5 14.1,4.5 15.6,6.5C18.1,9.8 18.9,13.8 17.6,15.7C16.8,17 15.6,17.8 14.7,17.8C13.7,17.8 12.6,16.8 11.1,14.8C8.6,11.5 7.8,7.5 9.1,5.6C9.9,4.3 11.1,3.5 12,3.5Z" />
+              </svg>
+            </div>
+          </div>
+
+          {/* ══ CONTENEDOR PRINCIPAL ══════════════════════════════════ */}
+          <div className="relative z-10 max-w-[1400px] mx-auto flex flex-col lg:flex-row flex-1 w-full">
+
+            {/* ────────────── COLUMNA IZQUIERDA: Texto ────────────── */}
+            <div className="flex-1 flex flex-col justify-center px-8 md:px-14 lg:px-16 py-6 lg:py-6 lg:max-w-[54%]">
+
+              {/* Badge Ubicación */}
+              <motion.div
+                initial={{ opacity: 0, y: -12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15, duration: 0.5 }}
+                className="hero-location-badge mb-6"
+              >
+                <MapPin size={13} className="text-[#C9A84C]" />
+                <span>{currentLang.location}</span>
+              </motion.div>
+
+              {/* Bienvenido a */}
+              <motion.span
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.25, duration: 0.5 }}
+                className="hero-welcome-label"
+              >
+                {currentLang.welcome}
+              </motion.span>
+
+              {/* Título principal TRÉBOL CAFÉ */}
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.35, duration: 0.6, type: 'spring', stiffness: 80 }}
+                className="hero-main-title"
+              >
+                TRÉBOL CAFÉ
+              </motion.h1>
+
+              {/* Subtítulo */}
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.45, duration: 0.5 }}
+                className="hero-subtitle-text"
+              >
+                {lang === 'es'
+                  ? 'Café de especialidad y coworking\nen el corazón de San Agustín.'
+                  : 'Specialty coffee & coworking\nin the heart of San Agustín.'}
+              </motion.p>
+
+
+
+              {/* ── CTA Buttons ── */}
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.65, duration: 0.5 }}
+                className="flex flex-wrap gap-3 mt-8"
+              >
+                {/* Explorar Catálogo */}
+                <motion.a
+                  whileHover={{ scale: 1.03, y: -2 }}
+                  whileTap={{ scale: 0.97 }}
+                  href="#catalogo"
+                  className="hero-cta-primary"
+                  id="hero_btn_catalogo"
+                >
+                  <Coffee size={15} />
+                  <span>{lang === 'es' ? 'EXPLORAR CATÁLOGO' : 'EXPLORE MENU'}</span>
+                </motion.a>
+
+                {/* Espacios Coworking */}
+                <motion.a
+                  whileHover={{ scale: 1.03, y: -2 }}
+                  whileTap={{ scale: 0.97 }}
+                  href="#coworking"
+                  className="hero-cta-secondary"
+                  id="hero_btn_coworking"
+                >
+                  <Laptop size={15} />
+                  <span>{lang === 'es' ? 'ESPACIOS COWORKING' : 'COWORKING SPACES'}</span>
+                </motion.a>
+              </motion.div>
+            </div>
+
+            {/* ────────────── COLUMNA DERECHA: Imagen ────────────── */}
+            <motion.div
+              initial={{ opacity: 0, x: 60 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3, duration: 0.8, type: 'spring', stiffness: 60 }}
+              className="hidden lg:flex flex-1 items-center justify-center relative"
+            >
+              {/* Glow detrás de la imagen */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-[480px] h-[480px] rounded-full bg-[#C9A84C]/8 blur-[90px]" />
               </div>
 
-                      {/* Welcome text */}
-              <span className="title-welcome">{currentLang.welcome}</span>
+              {/* Imagen principal del café */}
+              <div className="hero-image-wrapper">
+                <img
+                  src="/img/hero_bg.png"
+                  alt="Trébol Café — especialidad y coworking"
+                  className="hero-hero-img"
+                />
+                {/* Overlay degradado en bordes */}
+                <div className="hero-img-edge-fade" />
+              </div>
+            </motion.div>
+          </div>
 
-              <h1 className="font-serif text-5xl sm:text-[90px] lg:text-[110px] leading-[0.85] font-black tracking-tighter gold-gradient-text mb-0">
-                <span className="title-brand">Trébol Café</span>
-              </h1>
+          {/* ══ FRANJA INFERIOR DE FEATURES ══════════════════════════ */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8, duration: 0.5 }}
+            className="hero-features-bar relative z-10"
+          >
+            {/* Mobile: Horizontal scroll */}
+            <div className="max-w-[1400px] mx-auto px-4 py-6 flex md:hidden overflow-x-auto snap-x snap-mandatory scrollbar-hide border-y border-white/5 bg-[#0A0A0A]/90 backdrop-blur-sm gap-8 rounded-t-[40px] rounded-b-[40px] my-4">
 
-              {/* Divider with clover icon */}
-              <div className="divider-with-icon">
-                <div className="line"></div>
-                <svg className="clover-icon" viewBox="0 0 24 24" fill="currentColor">
+              <div className="hero-feature-item flex-shrink-0 snap-start">
+                <Coffee size={20} className="hero-feature-icon" />
+                <div>
+                  <p className="hero-feature-title">{lang === 'es' ? 'CAFÉ DE ESPECIALIDAD' : 'SPECIALTY COFFEE'}</p>
+                  <p className="hero-feature-desc">{lang === 'es' ? 'Granos 100% huilenses' : '100% single-origin beans'}</p>
+                </div>
+              </div>
+
+              <div className="hero-feature-item flex-shrink-0 snap-start">
+                <Wifi size={20} className="hero-feature-icon" />
+                <div>
+                  <p className="hero-feature-title">{lang === 'es' ? 'WIFI DE ALTA VELOCIDAD' : 'HIGH-SPEED WIFI'}</p>
+                  <p className="hero-feature-desc">{lang === 'es' ? 'Ideal para trabajar y estudiar' : 'Perfect for work & study'}</p>
+                </div>
+              </div>
+
+              <div className="hero-feature-item flex-shrink-0 snap-start">
+                <Users size={20} className="hero-feature-icon" />
+                <div>
+                  <p className="hero-feature-title">{lang === 'es' ? 'ESPACIOS COWORKING' : 'COWORKING SPACES'}</p>
+                  <p className="hero-feature-desc">{lang === 'es' ? 'Ambientes cómodos y modernos' : 'Comfortable & modern'}</p>
+                </div>
+              </div>
+
+              <div className="hero-feature-item flex-shrink-0 snap-start">
+                <svg viewBox="0 0 24 24" fill="currentColor" className="hero-feature-icon" style={{width:20,height:20}}>
                   <path d="M12 2C10.5 2 9.5 3 9.5 4.5C9.5 6 10.5 7 12 8C13.5 7 14.5 6 14.5 4.5C14.5 3 13.5 2 12 2ZM22 12C22 10.5 21 9.5 19.5 9.5C18 9.5 17 10.5 16 12C17 13.5 18 14.5 19.5 14.5C21 14.5 22 13.5 22 12ZM12 22C13.5 22 14.5 21 14.5 19.5C14.5 18 13.5 17 12 16C10.5 17 9.5 18 9.5 19.5C9.5 21 10.5 22 12 22ZM2 12C2 13.5 3 14.5 4.5 14.5C6 14.5 7 13.5 8 12C7 10.5 6 9.5 4.5 9.5C3 9.5 2 10.5 2 12Z"/>
                 </svg>
-                <div className="line"></div>
-              </div>
-
-              <p className="text-base sm:text-lg text-white/60 max-w-xl leading-relaxed mb-8">
-                {currentLang.hero_desc}
-              </p>
-
-              <div className="flex flex-wrap gap-4 w-full">
-                <motion.a 
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  href="#catalogo" 
-                  className="px-8 py-4 bg-primary text-black font-black text-xs tracking-[0.2em] uppercase text-center cursor-pointer hover:bg-white hover:text-black transition-all border border-primary duration-300 min-w-[200px]"
-                >
-                  {currentLang.btn_catalog}
-                </motion.a>
-                <motion.a 
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  href="#contacto" 
-                  onClick={() => setActiveTab('booking')}
-                  className="px-8 py-4 border border-white/20 text-white font-bold text-xs tracking-[0.18em] uppercase text-center cursor-pointer hover:bg-primary hover:text-black hover:border-primary transition-all duration-300 min-w-[200px]"
-                >
-                  {currentLang.btn_coworking}
-                </motion.a>
-              </div>
-
-              {/* Dynamic highlights for micro-lot availability */}
-              <div className="mt-12 p-5 bg-[#111111] border border-white/10 max-w-md w-full flex items-center gap-4">
-                <div className="w-10 h-10 rounded bg-[#C9A84C]/10 flex items-center justify-center shrink-0 border border-[#C9A84C]/20">
-                  <Coffee className="text-[#C9A84C]" size={18} />
-                </div>
                 <div>
-                  <h4 className="text-[10px] font-mono font-black tracking-widest text-[#C9A84C] uppercase">
-                    [ {lang === 'es' ? 'LOTE ACTIVO' : 'ACTIVE MICRO-LOT'} ]
-                  </h4>
-                  <p className="text-xs text-white/60 mt-1">
-                    {lang === 'es' 
-                      ? 'Borbón Rosado (Finca El Trébol). Cosechado a 1,750 msnm. Notas frutales intensas.' 
-                      : 'Pink Bourbon (El Trébol Farm). Harvested at 1,750 masl. Rich fruity acidity.'}
-                  </p>
+                  <p className="hero-feature-title">{lang === 'es' ? 'COMPROMISO LOCAL' : 'LOCAL COMMITMENT'}</p>
+                  <p className="hero-feature-desc">{lang === 'es' ? 'Apoyamos talento y comunidad' : 'Supporting talent & community'}</p>
                 </div>
               </div>
 
-            </motion.div>
-
-            {/* Right overlapping images mockup block */}
-            <div className="lg:col-span-6 relative h-[500px] md:h-[600px] w-full mt-8 lg:mt-0">
-              
-              {/* Back ambient frame */}
-              <motion.div 
-                initial={{ opacity: 0, y: 50, scale: 0.95 }}
-                whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ type: 'spring', damping: 18, stiffness: 70, delay: 0.2 }}
-                className="absolute right-0 top-4 w-3/4 aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl border border-border-subtle z-20 group"
-              >
-                <img 
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
-                  src="/img/bebida3.jpeg"
-                  alt="Specialty Latte Art" 
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-bg-dark/80 via-transparent to-transparent"></div>
-                <div className="absolute bottom-4 left-4 right-4 bg-bg-elevated/90 backdrop-blur-md p-3 rounded-xl border border-border-subtle flex justify-between items-center">
-                  <div>
-                    <h5 className="text-xs font-bold tracking-widest uppercase text-primary">Barra de Especialidad</h5>
-                    <p className="text-[10px] text-text-subtle">Huila single farms only</p>
-                  </div>
-                  <Coffee size={14} className="text-primary" />
-                </div>
-              </motion.div>
-
-              {/* Front Overlapping space frame */}
-              <motion.div 
-                initial={{ opacity: 0, y: 80, scale: 0.95 }}
-                whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ type: 'spring', damping: 18, stiffness: 70, delay: 0.4 }}
-                className="absolute left-0 bottom-4 w-1/2 aspect-square rounded-2xl overflow-hidden shadow-2xl border border-border-subtle z-30 group"
-              >
-                <img 
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
-                  src="/img/espacios.jpeg"
-                  alt="Modern Coworking Space in Huila" 
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-bg-dark/80 via-transparent to-transparent"></div>
-                <div className="absolute bottom-3 left-3 right-3 bg-bg-elevated/90 backdrop-blur-md p-2.5 rounded-lg border border-border-subtle flex justify-between items-center">
-                  <div>
-                    <h5 className="text-[10px] font-bold tracking-widest uppercase text-[#FAFAF8]">Coworking Premium</h5>
-                    <p className="text-[9px] text-primary">300+ Mbps Red</p>
-                  </div>
-                  <Laptop size={12} className="text-primary" />
-                </div>
-              </motion.div>
-
-              {/* Tiny background accent roaster frame */}
-              <motion.div 
-                initial={{ opacity: 0, x: -30 }}
-                whileInView={{ opacity: 0.7, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ type: 'spring', damping: 18, stiffness: 70, delay: 0.6 }}
-                className="absolute -left-8 top-1/4 w-1/3 aspect-[4/5] rounded-xl overflow-hidden shadow-xl border border-border-subtle z-10 opacity-70 hidden sm:block"
-              >
-                <img 
-                  className="w-full h-full object-cover" 
-                  src="https://images.unsplash.com/photo-1502462041640-b3d7e50d0662?q=80&w=400&auto=format&fit=crop"
-                  alt="Coffee Roasting Lab" 
-                  referrerPolicy="no-referrer"
-                />
-              </motion.div>
-
             </div>
 
-          </div>
-        </section>
+            {/* Desktop: Original grid */}
+            <div className="hidden md:block">
+              <div className="max-w-[1400px] mx-auto px-14 py-11 grid grid-cols-4 gap-4">
+                <div className="hero-feature-item">
+                  <Coffee size={20} className="hero-feature-icon" />
+                  <div>
+                    <p className="hero-feature-title">{lang === 'es' ? 'CAFÉ DE ESPECIALIDAD' : 'SPECIALTY COFFEE'}</p>
+                    <p className="hero-feature-desc">{lang === 'es' ? 'Granos 100% huilenses' : '100% single-origin beans'}</p>
+                  </div>
+                </div>
 
-        {/* About / Esencia Section */}
-        <section id="nosotros" className="py-24 px-12 max-w-7xl mx-auto border-t border-white/10"
-  style={{
-    background: 'linear-gradient(180deg, #0A0A0A 0%, #12100E 50%, #0A0A0A 100%)'
-  }}
->
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start mb-16">
-            
-            {/* Left editorial column */}
-            <motion.div 
-              initial={{ opacity: 0, x: -50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ type: 'spring', damping: 20, stiffness: 80 }}
-              className="lg:col-span-5"
-            >
-              <span className="font-mono text-xs text-[#C9A84C] uppercase tracking-[0.25em] block mb-4 font-black">
-                [ {currentLang.esencia_title} ]
-              </span>
-              <h2 className="font-sans text-4xl md:text-5xl font-black uppercase tracking-tighter mb-6 leading-none">
-                {currentLang.esencia_header}
-              </h2>
-              <p className="text-white/60 mb-8 leading-relaxed text-sm">
-                {currentLang.esencia_desc}
-              </p>
-              
-              <div className="p-6 bg-[#111111] border-l-4 border-[#C9A84C] rounded-none">
-                <p className="italic text-[#C9A84C] text-sm font-sans font-bold">
-                  {currentLang.quote}
-                </p>
+                <div className="hero-feature-item">
+                  <Wifi size={20} className="hero-feature-icon" />
+                  <div>
+                    <p className="hero-feature-title">{lang === 'es' ? 'WIFI DE ALTA VELOCIDAD' : 'HIGH-SPEED WIFI'}</p>
+                    <p className="hero-feature-desc">{lang === 'es' ? 'Ideal para trabajar y estudiar' : 'Perfect for work & study'}</p>
+                  </div>
+                </div>
+
+                <div className="hero-feature-item">
+                  <Users size={20} className="hero-feature-icon" />
+                  <div>
+                    <p className="hero-feature-title">{lang === 'es' ? 'ESPACIOS COWORKING' : 'COWORKING SPACES'}</p>
+                    <p className="hero-feature-desc">{lang === 'es' ? 'Ambientes cómodos y modernos' : 'Comfortable & modern'}</p>
+                  </div>
+                </div>
+
+                <div className="hero-feature-item">
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="hero-feature-icon" style={{width:20,height:20}}>
+                    <path d="M12 2C10.5 2 9.5 3 9.5 4.5C9.5 6 10.5 7 12 8C13.5 7 14.5 6 14.5 4.5C14.5 3 13.5 2 12 2ZM22 12C22 10.5 21 9.5 19.5 9.5C18 9.5 17 10.5 16 12C17 13.5 18 14.5 19.5 14.5C21 14.5 22 13.5 22 12ZM12 22C13.5 22 14.5 21 14.5 19.5C14.5 18 13.5 17 12 16C10.5 17 9.5 18 9.5 19.5C9.5 21 10.5 22 12 22ZM2 12C2 13.5 3 14.5 4.5 14.5C6 14.5 7 13.5 8 12C7 10.5 6 9.5 4.5 9.5C3 9.5 2 10.5 2 12Z"/>
+                  </svg>
+                  <div>
+                    <p className="hero-feature-title">{lang === 'es' ? 'COMPROMISO LOCAL' : 'LOCAL COMMITMENT'}</p>
+                    <p className="hero-feature-desc">{lang === 'es' ? 'Apoyamos talento y comunidad' : 'Supporting talent & community'}</p>
+                  </div>
+                </div>
               </div>
-            </motion.div>
-
-            {/* Right features grid */}
-            <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-6">
-              
-              <motion.div 
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ type: 'spring', damping: 15, stiffness: 70, delay: 0.1 }}
-                className="bg-[#111111] p-8 rounded-none border border-white/10 hover:border-primary/40 hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 group"
-              >
-                <div className="w-12 h-12 rounded-none bg-[#C9A84C]/10 flex items-center justify-center text-[#C9A84C] mb-6 group-hover:bg-[#C9A84C] group-hover:text-black transition-all">
-                  <Coffee size={24} />
-                </div>
-                <h4 className="text-lg font-black uppercase tracking-tight text-white mb-2">
-                  {lang === 'es' ? 'Café de Origen Único' : 'Single Batch Specialty'}
-                </h4>
-                <p className="text-xs text-white/50 leading-relaxed">
-                  {lang === 'es'
-                    ? 'Seleccionamos granos premium de caficultores de San Agustín. Procesos naturales, lavados y honey que realzan tazas inimaginables.'
-                    : 'Curated premium beans from local San Agustín growers. Natural, washed & honey processes highlight unimaginable tasting notes.'}
-                </p>
-                <button 
-                  onClick={() => notify(lang === 'es' ? 'Cosechas obtenidas de fincas sobre 1700msnm' : 'All beans harvested above 1700 masl', 'info')}
-                  className="mt-6 text-[10px] uppercase font-black tracking-widest text-[#C9A84C] hover:underline flex items-center gap-1.5"
-                >
-                  {lang === 'es' ? 'Saber más sobre el origen' : 'Tell me more about origin'}
-                  <ArrowRight size={10} />
-                </button>
-              </motion.div>
-
-              <motion.div 
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ type: 'spring', damping: 15, stiffness: 70, delay: 0.1 }}
-                className="bg-[#111111] p-8 rounded-none border border-white/10 hover:border-primary/40 hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 group"
-              >
-                <div className="w-12 h-12 rounded-none bg-[#C9A84C]/10 flex items-center justify-center text-[#C9A84C] mb-6 group-hover:bg-[#C9A84C] group-hover:text-black transition-all">
-                  <Laptop size={24} />
-                </div>
-                <h4 className="text-lg font-black uppercase tracking-tight text-white mb-2">
-                  {lang === 'es' ? 'Coworking Inteligente' : 'Seamless Coworking'}
-                </h4>
-                <p className="text-xs text-white/50 leading-relaxed">
-                  {lang === 'es'
-                    ? 'Fibra simétrica de alta velocidad, sillas ergonómicas, café a demanda, y aire diseñado para fluir en tus ideas.'
-                    : 'High-speed symmetrical bandwidth, ergonomic seating, active beverage hub, and clean climate customized to help you work.'}
-                </p>
-                <button 
-                  onClick={() => notify(lang === 'es' ? 'Conexión por fibra óptica con respaldo secundario' : 'Optic fiber network with failover backup', 'info')}
-                  className="mt-6 text-[10px] uppercase font-black tracking-widest text-[#C9A84C] hover:underline flex items-center gap-1.5"
-                >
-                  {lang === 'es' ? 'Revisar infraestructura Red' : 'Check network speed info'}
-                  <ArrowRight size={10} />
-                </button>
-              </motion.div>
-
-              <motion.div 
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ type: 'spring', damping: 15, stiffness: 70, delay: 0.5 }}
-                className="bg-[#111111] p-8 rounded-none border border-white/10 hover:border-primary/40 hover:shadow-2xl hover:scale-[1.01] transition-all duration-300 sm:col-span-2 group"
-              >
-                <div className="w-12 h-12 rounded-none bg-[#C9A84C]/10 flex items-center justify-center text-[#C9A84C] mb-6 group-hover:bg-[#C9A84C] group-hover:text-black transition-all">
-                  <Wifi size={24} />
-                </div>
-                <h4 className="text-lg font-black uppercase tracking-tight text-white mb-2">
-                  {lang === 'es' ? 'Comunidad y Aprendizaje Co-creativo' : 'Collab Space & Academy'}
-                </h4>
-                <p className="text-xs text-white/50 leading-relaxed">
-                  {lang === 'es'
-                    ? '¿Quieres aprender sobre catación, barismo, o expandir tu red con otros profesionales? En Trébol dictamos talleres constantes respaldados por expertos y el SENA, uniendo el conocimiento caficultor del Huila con el mundo digital.'
-                    : 'Interested in professional tasting, brewing, or looking to network? Trébol offers frequent hands-on academies backed by expert coffee producers and the SENA, blending local Huila heritage with global digital trends.'}
-                </p>
-              </motion.div>
-
-            </div>
-          </div>
-
-          {/* Stats Bar */}
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ type: 'spring', damping: 18, stiffness: 60 }}
-            className="grid grid-cols-1 md:grid-cols-3 border border-white/10 py-10 text-center bg-[#111111] rounded-none"
-          >
-            <div className="p-4 md:border-r border-white/10">
-              <span className="block font-sans text-5xl font-black text-[#C9A84C] tracking-tighter mb-1">100%</span>
-              <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/40">
-                {currentLang.stat_origin}
-              </span>
-            </div>
-            <div className="p-4 md:border-r border-white/10">
-              <span className="block font-sans text-5xl font-black text-[#C9A84C] tracking-tighter mb-1">300+</span>
-              <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/40">
-                {currentLang.stat_wifi}
-              </span>
-            </div>
-            <div className="p-4">
-              <span className="block font-sans text-4xl font-black text-[#C9A84C] tracking-tighter mb-1">07:00 - 21:00</span>
-              <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/40">
-                {currentLang.stat_hours}
-              </span>
             </div>
           </motion.div>
-
         </section>
 
         {/* Curated Catalog Section */}
-        <section id="catalogo" className="py-24 px-12 border-t border-white/10 relative overflow-hidden"
+        <section id="catalogo" className="py-24 px-2 md:px-12 border-t border-white/10 relative overflow-hidden"
   style={{
     background: `
-      linear-gradient(180deg, rgba(10, 10, 10, 0.88) 0%, rgba(17, 14, 12, 0.9) 52%, rgba(10, 10, 10, 0.94) 100%),
-      url("/img/espacios2.jpeg") center / cover no-repeat
+      linear-gradient(180deg, rgba(10, 10, 10, 0.85) 0%, rgba(17, 14, 12, 0.88) 50%, rgba(10, 10, 10, 0.92) 100%),
+      url("/img/hero_bg.png") center / cover no-repeat
     `
   }}
 >
-          <div className="max-w-7xl mx-auto">
+          <div className="w-full md:max-w-7xl md:mx-auto">
             
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: -30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ type: 'spring', damping: 18, stiffness: 70 }}
-              className="text-center mb-16"
+              className="text-center mb-16 px-4"
             >
               <span className="font-mono text-xs text-[#C9A84C] uppercase tracking-[0.25em] font-black block mb-4">
                 [ {currentLang.cat_title} ]
               </span>
-              <h2 className="font-sans text-4xl md:text-5xl font-black uppercase tracking-tighter mb-8 leading-none">
-                {currentLang.cat_header}
-              </h2>
 
-              {/* Filter Category Buttons */}
-              <div className="flex flex-wrap justify-center gap-3 max-w-2xl mx-auto">
-                {filterCategories.map((cat) => (
-                  <motion.button
-                    whileHover={{ scale: 1.04 }}
-                    whileTap={{ scale: 0.96 }}
-                    key={cat}
-                    onClick={() => {
-                      setActiveCategory(cat);
-                      notify(lang === 'es' ? `Filtrando por: ${cat}` : `Filtering by: ${cat}`, 'info');
-                    }}
-                    className={`px-6 py-3 border text-[11px] tracking-widest font-black uppercase transition-all duration-300 rounded-none cursor-pointer ${
-                      activeCategory === cat
-                        ? 'bg-[#C9A84C] border-[#C9A84C] text-black scale-102 shadow-lg shadow-[#C9A84C]/10'
-                        : 'bg-[#111111] border-white/10 text-white/60 hover:text-[#C9A84C] hover:border-[#C9A84C]'
-                    }`}
-                  >
-                    {lang === 'en' && cat === 'Todos' ? 'All' : cat}
-                  </motion.button>
-                ))}
+              {/* Filter Category Buttons - Desktop only */}
+              <div className="max-w-2xl mx-auto hidden md:block text-center">
+                <div className="flex flex-wrap justify-center gap-3">
+                  {filterCategories.map((cat) => (
+                    <motion.button
+                      whileHover={{ scale: 1.04 }}
+                      whileTap={{ scale: 0.96 }}
+                      key={cat}
+                      onClick={() => {
+                        setActiveCategory(cat);
+                        notify(lang === 'es' ? `Filtrando por: ${cat}` : `Filtering by: ${cat}`, 'info');
+                      }}
+                      className={`px-6 py-3 border text-[11px] tracking-widest font-black uppercase transition-all duration-300 rounded-none cursor-pointer ${
+                        activeCategory === cat
+                          ? 'bg-[#C9A84C] border-[#C9A84C] text-black scale-102 shadow-lg shadow-[#C9A84C]/10'
+                          : 'bg-[#111111] border-white/10 text-white/60 hover:text-[#C9A84C] hover:border-[#C9A84C]'
+                      }`}
+                    >
+                      {lang === 'en' && cat === 'Todos' ? 'All' : cat}
+                    </motion.button>
+                  ))}
+                </div>
               </div>
             </motion.div>
 
-            {/* Menu Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              <AnimatePresence mode="popLayout">
-                {filteredItems.map((product) => {
-                  const itemRating = reviews[product.id] || { rating: 4.8, count: 25 };
+            {/* Menu Grid - Desktop: Grid, Mobile: Netflix style horizontal rows */}
+            <div>
+              {/* Desktop Grid */}
+              <div className="hidden md:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <AnimatePresence mode="popLayout">
+                  {filteredItems.map((product) => {
+                    return (
+                      <motion.div
+                        layout
+                        initial={{ opacity: 0, scale: 0.93 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.93 }}
+                        whileHover={{ y: -6, borderColor: 'rgba(201, 168, 76, 0.45)' }}
+                        transition={{ duration: 0.3 }}
+                        className="group relative bg-[#111111] rounded-xl overflow-hidden border border-white/10 transition-all flex flex-col justify-between"
+                        key={product.id}
+                      >
+                        <div>
+                          {/* Aspect square with subtle zoom on cover image */}
+                          <div className="aspect-square overflow-hidden relative cursor-pointer" onClick={() => setSelectedProduct(product)}>
+                            <img 
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+                              src={product.image} 
+                              alt={product.title} 
+                              referrerPolicy="no-referrer"
+                            />
+
+
+                            {/* Quick info tag on hover */}
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <span className="px-4 py-2 bg-[#C9A84C] text-black text-xs font-black uppercase tracking-widest rounded-lg shadow-lg flex items-center gap-1.5 transform translate-y-2 group-hover:translate-y-0 transition-transform">
+                                <Eye size={12} />
+                                {lang === 'es' ? 'Ver Detalles' : 'View Spec'}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="p-5">
+                            <div className="flex justify-between items-start gap-2 mb-2">
+                              <h4 className="font-serif-elegant text-lg text-[#C9A84C] font-black uppercase tracking-tight hover:underline cursor-pointer leading-tight" onClick={() => setSelectedProduct(product)}>
+                                {product.title}
+                              </h4>
+                            </div>
+
+                            <div className="flex items-center justify-between mb-4">
+                              <span className="text-[10px] uppercase tracking-widest font-bold text-white/40 block">[ {product.category} ]</span>
+                              <span className="font-mono text-sm font-black text-white bg-white/5 border border-white/10 px-2 py-0.5 rounded-lg shrink-0">
+                                {product.price === 0 ? (lang === 'es' ? 'Consultar' : 'Ask us') : `$${product.price.toLocaleString('es-CO')}`}
+                              </span>
+                            </div>
+
+                            <p className="text-xs text-white/60 mb-4 line-clamp-2 h-8">
+                              {product.description}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="p-5 pt-0">
+                          {product.category === 'Coworking' ? (
+                            <button
+                              onClick={() => {
+                                setContactForm(prev => ({
+                                  ...prev,
+                                  interest: 'Reserva Coworking',
+                                  message: `Hola, deseo reservar el espacio: ${product.title}.`
+                                }));
+                                const targetElement = document.getElementById('contacto');
+                                if (targetElement) {
+                                  targetElement.scrollIntoView({ behavior: 'smooth' });
+                                }
+                                notify(lang === 'es' ? `Completando pase: ${product.title}` : `Setting desk: ${product.title}`, 'info');
+                              }}
+                              className="w-full py-2.5 font-sans-modern text-xs font-bold border border-primary rounded-full text-primary hover:bg-primary hover:text-on-primary transition-all uppercase tracking-widest"
+                            >
+                              {currentLang.btn_reserve}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => addToCart(product)}
+                              className="w-full py-2.5 font-sans-modern text-xs font-bold bg-primary/10 border border-border-accent rounded-full text-primary hover:bg-primary hover:text-on-primary hover:shadow-lg hover:shadow-primary/10 transition-all uppercase tracking-widest"
+                            >
+                              {currentLang.btn_add}
+                            </button>
+                          )}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+              </div>
+
+              {/* Mobile: Netflix style horizontal rows - 7 category rows */}
+              <div className="md:hidden space-y-6">
+                {filterCategories.filter(cat => cat !== 'Todos').map((category) => {
+                  const categoryItems = filteredItems.filter(product => product.category === category);
+                  if (categoryItems.length === 0) return null;
+                  
                   return (
-                    <motion.div
-                      layout
-                      initial={{ opacity: 0, scale: 0.93 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.93 }}
-                      whileHover={{ y: -6, borderColor: 'rgba(201, 168, 76, 0.45)' }}
-                      transition={{ duration: 0.3 }}
-                      key={product.id}
-                      className="group relative bg-[#111111] rounded-none overflow-hidden border border-white/10 transition-all flex flex-col justify-between"
-                    >
-                      <div>
-                        {/* Aspect square with subtle zoom on cover image */}
-                        <div className="aspect-square overflow-hidden relative cursor-pointer" onClick={() => setSelectedProduct(product)}>
-                          <img 
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
-                            src={product.image} 
-                            alt={product.title} 
-                            referrerPolicy="no-referrer"
-                          />
-                          <div className="absolute top-3 right-3 bg-black/95 px-3 py-1 rounded-none border border-[#C9A84C]/30 z-10 flex items-center gap-1">
-                            <Star size={12} className="text-[#C9A84C] fill-[#C9A84C]" />
-                            <span className="font-mono text-[11px] font-bold text-primary">
-                              {itemRating.rating}
-                            </span>
-                          </div>
+                    <div key={category} className="relative">
+                      <h3 className="text-xs font-mono text-[#C9A84C] uppercase tracking-[0.2em] font-black mb-3 ml-1">
+                        {category}
+                      </h3>
+                      <div className="catalog-scroll-container flex overflow-x-auto gap-3 pb-4 snap-x snap-mandatory scrollbar-hide">
+                        <AnimatePresence mode="popLayout">
+                          {categoryItems.map((product) => {
+                            return (
+                              <motion.div
+                                layout
+                                initial={{ opacity: 0, scale: 0.93 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.93 }}
+                                whileHover={{ y: -6, borderColor: 'rgba(201, 168, 76, 0.45)' }}
+                                transition={{ duration: 0.3 }}
+                                className="flex-shrink-0 w-48 snap-start group relative bg-[#111111] rounded-xl overflow-hidden border border-white/10 transition-all flex flex-col justify-between"
+                                key={product.id}
+                              >
+                                <div>
+                                  {/* Aspect square with subtle zoom on cover image */}
+                                  <div className="aspect-square overflow-hidden relative cursor-pointer" onClick={() => setSelectedProduct(product)}>
+                                    <img 
+                                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+                                      src={product.image} 
+                                      alt={product.title} 
+                                      referrerPolicy="no-referrer"
+                                    />
 
-                          {/* Quick info tag on hover */}
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <span className="px-4 py-2 bg-[#C9A84C] text-black text-xs font-black uppercase tracking-widest rounded-none shadow-lg flex items-center gap-1.5 transform translate-y-2 group-hover:translate-y-0 transition-transform">
-                              <Eye size={12} />
-                              {lang === 'es' ? 'Ver Detalles' : 'View Spec'}
-                            </span>
-                          </div>
-                        </div>
 
-                        <div className="p-5">
-                          <div className="flex justify-between items-start gap-2 mb-2">
-                            <h4 className="font-sans text-lg text-[#C9A84C] font-black uppercase tracking-tight hover:underline cursor-pointer leading-tight" onClick={() => setSelectedProduct(product)}>
-                              {product.title}
-                            </h4>
-                          </div>
+                                    {/* Quick info tag on hover */}
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                      <span className="px-3 py-1.5 bg-[#C9A84C] text-black text-[10px] font-black uppercase tracking-widest rounded-lg shadow-lg flex items-center gap-1 transform translate-y-2 group-hover:translate-y-0 transition-transform">
+                                        <Eye size={10} />
+                                        {lang === 'es' ? 'Ver' : 'View'}
+                                      </span>
+                                    </div>
+                                  </div>
 
-                          <div className="flex items-center justify-between mb-4">
-                            <span className="text-[10px] uppercase tracking-widest font-bold text-white/40 block">[ {product.category} ]</span>
-                            <span className="font-mono text-sm font-black text-white bg-white/5 border border-white/10 px-2 py-0.5 rounded-none shrink-0">
-                              ${product.price.toLocaleString('es-CO')}
-                            </span>
-                          </div>
+                                  <div className="p-3">
+                                    <div className="flex justify-between items-start gap-1 mb-1">
+                                      <h4 className="font-serif-elegant text-sm text-[#C9A84C] font-black uppercase tracking-tight hover:underline cursor-pointer leading-tight" onClick={() => setSelectedProduct(product)}>
+                                        {product.title}
+                                      </h4>
+                                    </div>
 
-                          <p className="text-xs text-white/60 mb-4 line-clamp-2 h-8">
-                            {product.description}
-                          </p>
-                        </div>
+                                    <div className="flex items-center justify-between mb-2">
+                                      <span className="text-[8px] uppercase tracking-widest font-bold text-white/40 block">{
+                                        product.category === 'Bebidas Calientes' ? (lang === 'es' ? 'Caliente' : 'Hot') :
+                                        product.category === 'Bebidas Frías' ? (lang === 'es' ? 'Fría' : 'Cold') :
+                                        product.category === 'Desayunos' ? (lang === 'es' ? 'Desayuno' : 'Breakfast') :
+                                        product.category === 'Postres' ? (lang === 'es' ? 'Postre' : 'Dessert') :
+                                        product.category === 'Tortas' ? (lang === 'es' ? 'Torta' : 'Cake') :
+                                        product.category === 'Métodos Especialidad' ? (lang === 'es' ? 'Especial' : 'Special') :
+                                        product.category === 'Coworking' ? (lang === 'es' ? 'Coworking' : 'Coworking') :
+                                        product.category
+                                      }</span>
+                                      <span className="font-mono text-[10px] font-black text-white bg-white/5 border border-white/10 px-1.5 py-0.5 rounded-lg shrink-0">
+                                        {product.price === 0 ? (lang === 'es' ? '?' : '?') : `$${product.price.toLocaleString('es-CO')}`}
+                                      </span>
+                                    </div>
+
+                                    <p className="text-[10px] text-white/60 mb-2 line-clamp-1 h-3">
+                                      {product.description}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="p-3 pt-0">
+                                  {product.category === 'Coworking' ? (
+                                    <button
+                                      onClick={() => {
+                                        setContactForm(prev => ({
+                                          ...prev,
+                                          interest: 'Reserva Coworking',
+                                          message: `Hola, deseo reservar el espacio: ${product.title}.`
+                                        }));
+                                        const targetElement = document.getElementById('contacto');
+                                        if (targetElement) {
+                                          targetElement.scrollIntoView({ behavior: 'smooth' });
+                                        }
+                                        notify(lang === 'es' ? `Completando pase: ${product.title}` : `Setting desk: ${product.title}`, 'info');
+                                      }}
+                                      className="w-full py-2 font-sans-modern text-[10px] font-bold border border-primary rounded-full text-primary hover:bg-primary hover:text-on-primary transition-all uppercase tracking-widest"
+                                    >
+                                      {currentLang.btn_reserve}
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => addToCart(product)}
+                                      className="w-full py-2 font-sans-modern text-[10px] font-bold bg-primary/10 border border-border-accent rounded-full text-primary hover:bg-primary hover:text-on-primary hover:shadow-lg hover:shadow-primary/10 transition-all uppercase tracking-widest"
+                                    >
+                                      {currentLang.btn_add}
+                                    </button>
+                                  )}
+                                </div>
+                              </motion.div>
+                            );
+                          })}
+                        </AnimatePresence>
                       </div>
-
-                      <div className="p-5 pt-0">
-                        {product.category === 'Coworking' ? (
-                          <button
-                            onClick={() => {
-                              setBookingForm(prev => ({
-                                ...prev,
-                                workspaceType: product.title.includes('Semanal') ? 'Escritorio Dedicado' : 'Escritorio Flexible'
-                              }));
-                              const targetElement = document.getElementById('contacto');
-                              if (targetElement) {
-                                targetElement.scrollIntoView({ behavior: 'smooth' });
-                              }
-                              notify(lang === 'es' ? `Completando pase: ${product.title}` : `Setting desk: ${product.title}`, 'info');
-                            }}
-                            className="w-full py-2.5 font-sans text-xs font-bold border border-primary rounded-full text-primary hover:bg-primary hover:text-on-primary transition-all uppercase tracking-widest"
-                          >
-                            {currentLang.btn_reserve}
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => addToCart(product)}
-                            className="w-full py-2.5 font-sans text-xs font-bold bg-primary/10 border border-border-accent rounded-full text-primary hover:bg-primary hover:text-on-primary hover:shadow-lg hover:shadow-primary/10 transition-all uppercase tracking-widest"
-                          >
-                            {currentLang.btn_add}
-                          </button>
-                        )}
-                      </div>
-                    </motion.div>
+                    </div>
                   );
                 })}
-              </AnimatePresence>
+              </div>
             </div>
 
           </div>
@@ -1050,167 +1250,125 @@ export default function App() {
         {/* Dynamic Interactive Features: Product Explorer Modal */}
         <AnimatePresence>
           {selectedProduct && (
-            <div className="fixed inset-0 bg-[#0A0A0A]/90 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto">
+            <div className="fixed inset-0 bg-[#0A0A0A]/92 backdrop-blur-md z-[60] flex items-center justify-center p-4 overflow-y-auto">
               <motion.div 
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
-                className="bg-[#1A1612] max-w-3xl w-full rounded-2xl overflow-hidden border border-border-accent shadow-2xl my-8"
+                initial={{ scale: 0.93, opacity: 0, y: 24 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.93, opacity: 0, y: 24 }}
+                transition={{ type: 'spring', damping: 22, stiffness: 200 }}
+                className="bg-[#1A1612] max-w-5xl w-full rounded-2xl overflow-hidden border border-border-accent shadow-2xl my-8"
               >
                 <div className="grid grid-cols-1 md:grid-cols-2">
                   
-                  {/* Image side with quick specifications */}
-                  <div className="relative aspect-square md:aspect-auto md:h-full min-h-[300px]">
+                  {/* Image side */}
+                  <div className="relative aspect-square md:aspect-auto md:h-full min-h-[420px] md:min-h-[560px]">
                     <img 
                       className="w-full h-full object-cover" 
                       src={selectedProduct.image} 
                       alt={selectedProduct.title} 
                       referrerPolicy="no-referrer"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-bg-dark via-transparent to-transparent"></div>
-                    <div className="absolute bottom-4 left-4 right-4 text-left">
-                      <span className="text-[10px] font-mono tracking-widest uppercase text-primary font-bold bg-black/60 px-2.5 py-1 rounded-full border border-primary/20">
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/10 to-transparent"></div>
+                    <div className="absolute bottom-6 left-6 right-6 text-left">
+                      <span className="text-[11px] font-mono tracking-widest uppercase text-primary font-bold bg-black/70 px-3 py-1.5 rounded-full border border-primary/30">
                         {lang === 'es' ? 'COSECHA SELECCIONADA' : 'CURATED HARVEST'}
                       </span>
-                      <h3 className="font-serif text-2xl font-bold mt-2 text-[#FAFAF8]">
+                      <h3 className="font-serif-display text-3xl font-bold mt-3 text-[#FAFAF8] leading-tight drop-shadow-lg">
                         {selectedProduct.title}
                       </h3>
                     </div>
                   </div>
 
-                  {/* Operational Settings Side */}
-                  <div className="p-6 md:p-8 flex flex-col justify-between">
+                  {/* Info side */}
+                  <div className="p-8 md:p-10 flex flex-col justify-between">
                     
                     <div>
-                      <div className="flex justify-between items-center mb-4">
-                        <span className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-bold tracking-widest uppercase rounded-full border border-primary/25">
+                      {/* Header: category + close */}
+                      <div className="flex justify-between items-center mb-6">
+                        <span className="px-4 py-1.5 bg-primary/10 text-primary text-[11px] font-bold tracking-widest uppercase rounded-full border border-primary/25">
                           {selectedProduct.category}
                         </span>
-
                         <button 
                           onClick={() => setSelectedProduct(null)}
-                          className="text-[#FAFAF8]/50 hover:text-primary p-1.5 rounded-full hover:bg-bg-elevated transition-colors"
+                          className="text-[#FAFAF8]/50 hover:text-primary p-2 rounded-full hover:bg-bg-elevated transition-colors"
                         >
-                          <X size={18} />
+                          <X size={22} />
                         </button>
                       </div>
 
-                      <p className="text-xl font-bold text-primary font-mono mb-4">
-                        ${selectedProduct.price.toLocaleString('es-CO')}
+                      {/* Price */}
+                      <p className="text-3xl font-black text-primary font-mono mb-4 tracking-tight">
+                        {selectedProduct.price === 0 ? (lang === 'es' ? 'Precio al consultar' : 'Price on request') : `$${selectedProduct.price.toLocaleString('es-CO')}`}
                       </p>
 
-                      <p className="text-xs text-text-muted leading-relaxed mb-6">
+                      {/* Description */}
+                      <p className="text-sm text-[#FAFAF8]/75 leading-relaxed mb-7">
                         {selectedProduct.description}
                       </p>
 
                       {/* Technical Batch Specification */}
                       {selectedProduct.details && (
-                        <div className="bg-[#0A0A0A]/60 rounded-xl p-4 border border-border-subtle mb-6 text-left">
-                          <h5 className="text-[10px] font-bold uppercase tracking-widest text-[#FAFAF8] mb-3 flex items-center gap-1.5">
-                            <Info size={12} className="text-primary" />
+                        <div className="bg-[#0A0A0A]/60 rounded-xl p-5 border border-border-subtle mb-6 text-left">
+                          <h5 className="text-[11px] font-bold uppercase tracking-widest text-[#FAFAF8] mb-4 flex items-center gap-2">
+                            <Info size={14} className="text-primary" />
                             {lang === 'es' ? 'Ficha de Especialidad' : 'Specialty Datasheet'}
                           </h5>
-                          <ul className="space-y-1.5 text-[11px] text-text-muted">
+                          <ul className="space-y-2.5 text-xs text-text-muted">
                             {selectedProduct.details.origin && (
-                              <li>
-                                <strong className="text-primary">{lang === 'es' ? 'Finca / Origen:' : 'Farm / Trace:'}</strong> {selectedProduct.details.origin}
+                              <li className="flex gap-2">
+                                <strong className="text-primary shrink-0">{lang === 'es' ? 'Origen:' : 'Origin:'}</strong>
+                                <span>{selectedProduct.details.origin}</span>
                               </li>
                             )}
                             {selectedProduct.details.intensity && (
-                              <li>
-                                <strong className="text-primary">{lang === 'es' ? 'Taza:' : 'Intensity / Profile:'}</strong> {selectedProduct.details.intensity}
+                              <li className="flex gap-2">
+                                <strong className="text-primary shrink-0">{lang === 'es' ? 'Perfil:' : 'Profile:'}</strong>
+                                <span>{selectedProduct.details.intensity}</span>
                               </li>
                             )}
                             {selectedProduct.details.allergens && (
-                              <li>
-                                <strong className="text-primary">{lang === 'es' ? 'Alérgenos:' : 'Allergens:'}</strong> {selectedProduct.details.allergens}
+                              <li className="flex gap-2">
+                                <strong className="text-primary shrink-0">{lang === 'es' ? 'Alérgenos:' : 'Allergens:'}</strong>
+                                <span>{selectedProduct.details.allergens}</span>
                               </li>
                             )}
                             {selectedProduct.details.wifi && (
-                              <li>
-                                <strong className="text-primary">{lang === 'es' ? 'Velocidad WiFi:' : 'Bandwidth:'}</strong> {selectedProduct.details.wifi}
+                              <li className="flex gap-2">
+                                <strong className="text-primary shrink-0">{lang === 'es' ? 'WiFi:' : 'Bandwidth:'}</strong>
+                                <span>{selectedProduct.details.wifi}</span>
                               </li>
                             )}
                             {selectedProduct.details.compañía && (
-                              <li>
-                                <strong className="text-primary">{lang === 'es' ? 'Inclusiones:' : 'Inclusions:'}</strong> {selectedProduct.details.compañía}
+                              <li className="flex gap-2">
+                                <strong className="text-primary shrink-0">{lang === 'es' ? 'Incluye:' : 'Includes:'}</strong>
+                                <span>{selectedProduct.details.compañía}</span>
+                              </li>
+                            )}
+                            {(selectedProduct.details as any).nota && (
+                              <li className="flex gap-2">
+                                <strong className="text-primary shrink-0">{lang === 'es' ? 'Nota:' : 'Note:'}</strong>
+                                <span>{(selectedProduct.details as any).nota}</span>
                               </li>
                             )}
                           </ul>
                         </div>
                       )}
-
-                      {/* Customize Options dynamically for Drinks or Treats */}
-                      {selectedProduct.category !== 'Coworking' && (
-                        <div className="space-y-4 mb-6 text-left">
-                          <label className="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1">
-                            {lang === 'es' ? 'Tipo de Leche / Adicional' : 'Milk options / Choice'}
-                          </label>
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            {[
-                              { key: 'sin-lácteos', label: lang === 'es' ? 'Sin Lácteos / Por defecto' : 'Oat/Almond option' },
-                              { key: 'entera', label: lang === 'es' ? 'Lácteo Semidescremado' : 'Whole milk option' }
-                            ].map(opt => (
-                              <button
-                                key={opt.key}
-                                onClick={() => setProductCustomization(p => ({ ...p, milk: opt.key }))}
-                                className={`p-2.5 rounded-lg border text-center transition-all ${
-                                  productCustomization.milk === opt.key 
-                                    ? 'border-primary bg-primary/10 text-primary font-bold' 
-                                    : 'border-border-subtle bg-[#0E0E0E] text-text-muted'
-                                }`}
-                              >
-                                {opt.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Micro-lot stars ratings */}
-                      <div className="border-t border-border-subtle pt-4 text-left">
-                        <label className="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-2">
-                          {lang === 'es' ? 'Calificar este Micro-lote' : 'Rate this Micro-lot'}
-                        </label>
-                        <div className="flex items-center gap-1">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <button
-                              key={star}
-                              onClick={() => handleProductRating(selectedProduct.id, star)}
-                              className="text-primary p-0.5 hover:scale-125 transition-transform"
-                            >
-                              <Star 
-                                size={20} 
-                                className={`${
-                                  (userRating?.productId === selectedProduct.id && userRating?.rating >= star) || 
-                                  (reviews[selectedProduct.id]?.rating >= star)
-                                    ? 'fill-primary text-primary' 
-                                    : 'text-text-subtle'
-                                }`} 
-                              />
-                            </button>
-                          ))}
-                          <span className="text-[11px] font-mono text-text-muted ml-2">
-                            ({reviews[selectedProduct.id]?.rating || 4.9} - {reviews[selectedProduct.id]?.count || 5} {lang === 'es' ? 'calificaciones' : 'rates'})
-                          </span>
-                        </div>
-                      </div>
-
                     </div>
 
-                    <div className="mt-8 flex gap-3">
+                    {/* Action buttons */}
+                    <div className="flex gap-4 mt-4">
                       <button
                         onClick={() => {
                           addToCart(selectedProduct);
                           setSelectedProduct(null);
                         }}
-                        className="flex-1 py-3 bg-primary text-on-primary font-bold text-xs uppercase tracking-widest rounded-full hover:scale-102 transition-transform"
+                        className="flex-1 py-4 bg-primary text-on-primary font-black text-sm uppercase tracking-widest rounded-full hover:brightness-110 transition-all shadow-lg shadow-primary/20"
                       >
                         {selectedProduct.category === 'Coworking' ? currentLang.btn_reserve : currentLang.btn_add}
                       </button>
                       <button
                         onClick={() => setSelectedProduct(null)}
-                        className="px-6 py-3 border border-border-subtle text-text-muted hover:text-[#FAFAF8] font-bold text-xs uppercase tracking-widest rounded-full"
+                        className="px-8 py-4 border border-border-subtle text-text-muted hover:text-[#FAFAF8] font-bold text-sm uppercase tracking-widest rounded-full transition-colors"
                       >
                         {lang === 'es' ? 'Cerrar' : 'Close'}
                       </button>
@@ -1245,7 +1403,7 @@ export default function App() {
                 <span className="font-mono text-xs text-[#C9A84C] uppercase tracking-[0.25em] font-black block mb-4">
                   [ {currentLang.contact_title} ]
                 </span>
-                <h2 className="font-sans text-4xl md:text-5xl font-black uppercase tracking-tighter mb-6">
+                <h2 className="font-serif-display text-4xl md:text-5xl font-black uppercase tracking-tighter mb-6">
                   {currentLang.contact_header}
                 </h2>
 
@@ -1259,7 +1417,7 @@ export default function App() {
                       <span className="block text-[10px] font-black uppercase tracking-widest text-[#C9A84C]">
                         {lang === 'es' ? 'Visítanos' : 'Come Over'}
                       </span>
-                      <span className="text-sm text-white/70">Carrera 14 # 3-25, San Agustín, Huila</span>
+                      <span className="text-sm text-white/70">Vereda El Tablon, San Agustín, Huila</span>
                     </div>
                   </div>
 
@@ -1269,7 +1427,7 @@ export default function App() {
                     </div>
                     <div>
                       <span className="block text-[10px] font-black uppercase tracking-widest text-[#C9A84C]">Email</span>
-                      <span className="text-sm text-white/70">hola@trebolcafe.co</span>
+                      <span className="text-sm text-white/70">eltrebolcafecoworking@gmail.com</span>
                     </div>
                   </div>
 
@@ -1281,85 +1439,36 @@ export default function App() {
                       <span className="block text-[10px] font-black uppercase tracking-widest text-[#C9A84C]">
                         {lang === 'es' ? 'Llámanos' : 'Phone'}
                       </span>
-                      <span className="text-sm text-white/70">+57 312 456 7890</span>
+                      <span className="text-sm text-white/70">3213298852</span>
                     </div>
                   </div>
 
                 </div>
               </div>
 
-              {/* Interactive map module */}
-              <div className="relative rounded-none overflow-hidden border border-white/10 flex flex-col justify-end p-6 h-64 group bg-[#111111] shadow-2xl">
+              {/* Google Maps Link */}
+              <div className="relative rounded-none overflow-hidden border border-white/10 h-64 group bg-[#111111] shadow-2xl flex flex-col items-center justify-center p-6">
+                <div className="absolute inset-0 opacity-10 group-hover:opacity-20 transition-all bg-[radial-gradient(#C9A84C_1.3px,transparent_1.3px)] [background-size:16px_16px]"></div>
                 
-                {/* Simulated customizable route guide map */}
-                <div className="absolute inset-0 opacity-20 group-hover:opacity-40 transition-all bg-[radial-gradient(#C9A84C_1.3px,transparent_1.3px)] [background-size:16px_16px]"></div>
-                
-                <div className="z-20 relative text-left">
+                <div className="z-10 text-center">
+                  <MapPin size={40} className="text-[#C9A84C] mx-auto mb-4" />
                   <h4 className="text-[10px] font-mono font-black tracking-widest text-[#C9A84C] uppercase mb-2">
                     [ {currentLang.map_title} ]
                   </h4>
-                  <p className="text-[11px] text-white/50 mb-4 max-w-sm">
+                  <p className="text-[11px] text-white/50 mb-6 max-w-sm">
                     {currentLang.map_desc}
                   </p>
                   
-                  {/* Location picker router */}
-                  <div className="flex flex-wrap gap-1.5 mb-3">
-                    <button 
-                      onClick={() => {
-                        setCurrentMapRoute('centro');
-                        notify(lang === 'es' ? 'Ruta del Parque Principal cargada: 2 min a pie.' : 'Central Park route loaded: 2 min walk.', 'info');
-                      }}
-                      className={`px-3 py-1 rounded-none text-[9px] uppercase font-mono font-bold border transition-colors ${
-                        currentMapRoute === 'centro' 
-                          ? 'bg-[#C9A84C] border-[#C9A84C] text-black' 
-                          : 'bg-[#111111] border-white/10 text-white/60 hover:text-[#C9A84C]'
-                      }`}
-                    >
-                      Park
-                    </button>
-                    <button 
-                      onClick={() => {
-                        setCurrentMapRoute('arqueologico');
-                        notify(lang === 'es' ? 'Ruta Parque Arqueológico cargada: 10 min en coche.' : 'Archaeological Park route: 10 min drive.', 'info');
-                      }}
-                      className={`px-3 py-1 rounded-none text-[9px] uppercase font-mono font-bold border transition-colors ${
-                        currentMapRoute === 'arqueologico' 
-                          ? 'bg-[#C9A84C] border-[#C9A84C] text-black' 
-                          : 'bg-[#111111] border-white/10 text-white/60 hover:text-[#C9A84C]'
-                      }`}
-                    >
-                      Archaeology
-                    </button>
-                    <button 
-                      onClick={() => {
-                        setCurrentMapRoute('pitalito');
-                        notify(lang === 'es' ? 'Ruta desde Terminal Pitalito cargada: 45 min.' : 'From Pitalito Terminal: 45 min.', 'info');
-                      }}
-                      className={`px-3 py-1 rounded-none text-[9px] uppercase font-mono font-bold border transition-colors ${
-                        currentMapRoute === 'pitalito' 
-                          ? 'bg-[#C9A84C] border-[#C9A84C] text-black' 
-                          : 'bg-[#111111] border-white/10 text-white/60 hover:text-[#C9A84C]'
-                      }`}
-                    >
-                      Pitalito
-                    </button>
-                  </div>
-
-                  <div className="bg-[#111111]/95 border border-white/10 p-2.5 rounded-none flex items-center justify-between text-[11px]">
-                    <span className="font-mono text-primary flex items-center gap-1 font-bold">
-                      <MapPin size={10} />
-                      {currentMapRoute === 'centro' && 'Huila Centro (200m)'}
-                      {currentMapRoute === 'arqueologico' && 'Parque Arqueol. (4.1km)'}
-                      {currentMapRoute === 'pitalito' && 'Pitalito Ruta (32km)'}
-                    </span>
-                    <span className="font-bold text-[#FAFAF8]">
-                      {currentMapRoute === 'centro' && '2 min'}
-                      {currentMapRoute === 'arqueologico' && '10 min'}
-                      {currentMapRoute === 'pitalito' && '45 min'}
-                    </span>
-                  </div>
+                  <a
+                    href="https://maps.app.goo.gl/iku5XDufX6TQtdCv6"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 bg-[#C9A84C] text-black px-6 py-3 text-xs font-bold uppercase tracking-wider rounded hover:bg-[#F2DEAA] transition-colors"
+                  >
+                    <MapPin size={14} />
+                    {lang === 'es' ? 'Ver ubicación en Google Maps' : 'View location on Google Maps'}
+                  </a>
                 </div>
-
               </div>
 
             </motion.div>
@@ -1376,140 +1485,13 @@ export default function App() {
                 
                 <div className="absolute top-0 right-0 w-36 h-36 bg-[#C9A84C]/5 blur-[55px] rounded-none"></div>
 
-                {/* Switcher Form Header */}
-                <div className="flex border-b border-white/10 mb-6">
-                  <motion.button
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setActiveTab('booking')}
-                    className={`flex-1 pb-3 text-xs font-black uppercase tracking-wider text-center border-b-2 transition-all cursor-pointer ${
-                      activeTab === 'booking' 
-                        ? 'border-[#C9A84C] text-[#C9A84C]' 
-                        : 'border-transparent text-white/50 hover:text-white'
-                    }`}
-                  >
-                    {lang === 'es' ? 'Reserva Coworking' : 'Coworking Ticket'}
-                  </motion.button>
-                  <motion.button
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setActiveTab('contact')}
-                    className={`flex-1 pb-3 text-xs font-black uppercase tracking-wider text-center border-b-2 transition-all cursor-pointer ${
-                      activeTab === 'contact' 
-                        ? 'border-[#C9A84C] text-[#C9A84C]' 
-                        : 'border-transparent text-white/50 hover:text-white'
-                    }`}
-                  >
-                    {lang === 'es' ? 'Enviar Mensaje' : 'Send Message'}
-                  </motion.button>
-                </div>
+                {/* Form Header */}
+                <h3 className="text-xs font-black uppercase tracking-widest text-[#C9A84C] mb-6">
+                  {lang === 'es' ? 'Enviar Mensaje' : 'Send Message'}
+                </h3>
 
-                {activeTab === 'booking' ? (
-                  /* Coworking Immediate booking slot */
-                  <form onSubmit={handleBookingSubmit} className="space-y-4">
-                    
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase text-white/50 tracking-widest block">
-                        {currentLang.form_full_name} <span className="text-[#C9A84C]">*</span>
-                      </label>
-                      <input 
-                        type="text"
-                        required
-                        value={bookingForm.fullName}
-                        onChange={(e) => setBookingForm(p => ({ ...p, fullName: e.target.value }))}
-                        className="w-full bg-black/50 border border-white/10 focus:border-[#C9A84C] rounded-none px-4 py-3 text-sm text-white outline-none transition-all placeholder:text-white/20"
-                        placeholder="Ana María Beltrán..."
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase text-white/50 tracking-widest block">
-                          {currentLang.form_email} <span className="text-[#C9A84C]">*</span>
-                        </label>
-                        <input 
-                          type="email"
-                          required
-                          value={bookingForm.email}
-                          onChange={(e) => setBookingForm(p => ({ ...p, email: e.target.value }))}
-                          className="w-full bg-black/50 border border-white/10 focus:border-[#C9A84C] rounded-none px-4 py-3 text-sm text-white outline-none transition-all placeholder:text-white/20"
-                          placeholder="ana@ejemplo.com"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase text-white/50 tracking-widest block">
-                          {currentLang.form_workspace}
-                        </label>
-                        <select
-                          value={bookingForm.workspaceType}
-                          onChange={(e) => setBookingForm(p => ({ ...p, workspaceType: e.target.value as any }))}
-                          className="w-full bg-black/50 border border-white/10 focus:border-[#C9A84C] rounded-none px-4 py-3 text-sm text-white outline-none transition-all cursor-pointer"
-                        >
-                          <option value="Escritorio Flexible" className="bg-[#111111]">{lang === 'es' ? 'Escritorio Flexible ($25.000/día)' : 'Hot Desk ($25.000/day)'}</option>
-                          <option value="Escritorio Dedicado" className="bg-[#111111]">{lang === 'es' ? 'Escritorio Dedicado ($35.000/día)' : 'Dedicated Desk ($35.000/day)'}</option>
-                          <option value="Sala de Reunión" className="bg-[#111111]">{lang === 'es' ? 'Sala de Reunión ($40.000/hora)' : 'Meeting Room ($40.000/hour)'}</option>
-                          <option value="Oficina Privada" className="bg-[#111111]">{lang === 'es' ? 'Oficina Privada ($60.000/día)' : 'Private Suite ($60.000/day)'}</option>
-                        </select>
-                      </div>
-
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase text-white/50 tracking-widest block">
-                          {currentLang.form_date} <span className="text-[#C9A84C]">*</span>
-                        </label>
-                        <input 
-                          type="date"
-                          required
-                          value={bookingForm.date}
-                          onChange={(e) => setBookingForm(p => ({ ...p, date: e.target.value }))}
-                          className="w-full bg-black/50 border border-white/10 focus:border-[#C9A84C] rounded-none px-4 py-3 text-sm text-white outline-none transition-all cursor-pointer"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase text-white/50 tracking-widest block">
-                          {currentLang.form_slot}
-                        </label>
-                        <select
-                          value={bookingForm.slot}
-                          onChange={(e) => setBookingForm(p => ({ ...p, slot: e.target.value }))}
-                          className="w-full bg-black/50 border border-white/10 focus:border-[#C9A84C] rounded-none px-4 py-3 text-sm text-white outline-none transition-all cursor-pointer"
-                        >
-                          <option value="Mañana (8:00 - 13:00)" className="bg-[#111111]">{lang === 'es' ? 'Mañana (8:00 - 13:00)' : 'Morning (8:00 - 13:00)'}</option>
-                          <option value="Tarde (13:00 - 18:00)" className="bg-[#111111]">{lang === 'es' ? 'Tarde (13:05 - 18:00)' : 'Afternoon (13:05 - 18:00)'}</option>
-                          <option value="Día Completo" className="bg-[#111111]">{lang === 'es' ? 'Día Completo (8:00 - 20:00)' : 'Full Day Session (8:00 - 20:00)'}</option>
-                        </select>
-                      </div>
-
-                    </div>
-
-                    <div className="bg-[#0A0A0A]/60 rounded-none p-4 border border-white/10 text-xs space-y-1.5">
-                      <div className="flex justify-between">
-                        <span className="text-white/40">{lang === 'es' ? 'Servicio de Internet Redundante:' : 'Internet Connection:'}</span>
-                        <span className="text-[#C9A84C] font-bold">300 Mbps Symmetrical</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-white/40">{lang === 'es' ? 'Cortesía de Café en Barra:' : 'Included Coffee Drink:'}</span>
-                        <span className="text-[#C9A84C] font-bold">{lang === 'es' ? '1 Bebida incluida' : '1 Free brewing'}</span>
-                      </div>
-                    </div>
-
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      type="submit"
-                      className="w-full py-4 bg-[#C9A84C] text-black font-sans text-xs font-black rounded-none uppercase tracking-widest transition-all mt-6 shadow-lg shadow-[#C9A84C]/10 cursor-pointer"
-                    >
-                      {currentLang.btn_send_booking}
-                    </motion.button>
-
-                  </form>
-                ) : (
-                  /* Standard contact / help letter */
-                  <form onSubmit={handleContactSubmit} className="space-y-4">
+                {/* Contact form */}
+                <form onSubmit={handleContactSubmit} className="space-y-4">
                     
                     <div className="space-y-1">
                       <label className="text-[10px] font-black uppercase text-white/50 tracking-widest block">
@@ -1577,14 +1559,12 @@ export default function App() {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       type="submit"
-                      className="w-full py-4 bg-[#C9A84C] text-black font-sans text-xs font-black rounded-none uppercase tracking-widest transition-all mt-6 shadow-lg shadow-[#C9A84C]/10 cursor-pointer"
+                      className="w-full py-4 bg-[#C9A84C] text-black font-sans-modern text-xs font-black rounded-none uppercase tracking-widest transition-all mt-6 shadow-lg shadow-[#C9A84C]/10 cursor-pointer"
                     >
-                      {currentLang.btn_send_contact}
+                      {lang === 'es' ? 'ENVIAR POR WHATSAPP' : 'SEND VIA WHATSAPP'}
                     </motion.button>
 
                   </form>
-                )}
-
               </div>
             </motion.div>
 
@@ -1605,19 +1585,19 @@ export default function App() {
               {currentLang.respaldo}
             </span>
 
-            {/* Institutional support logos from original brand */}
-            <div className="flex flex-wrap justify-center items-center gap-12">
-              <div className="h-20 flex items-center transition-all duration-300 transform hover:-translate-y-1 grayscale opacity-55 hover:grayscale-0 hover:opacity-100">
-                <img src="/img/logo_institucionales/1.jpg" alt="Colombia Potencia de la Vida" className="h-14 w-14 rounded-full object-cover border border-[#C9A84C]/30 shadow-[0_0_0_3px_rgba(201,168,76,0.08)]" />
+            {/* Institutional support logos from original brand - Horizontal scroll for all */}
+            <div className="logo-institucionales flex justify-center items-center gap-6 md:gap-12 overflow-x-auto snap-x snap-mandatory scrollbar-hide px-4 bg-[#0A0A0A]/90 backdrop-blur-sm">
+              <div className="flex-shrink-0 snap-start">
+                <img src="/img/logo_institucionales/1.jpg" alt="Colombia Potencia de la Vida" className="h-16 md:h-20 w-28 md:w-32 rounded-[8px md:rounded-[10px] object-cover border border-[#C9A84C]/30 shadow-[0_0_0_3px_rgba(201,168,76,0.08)]" />
               </div>
-              <div className="h-20 flex items-center transition-all duration-300 transform hover:-translate-y-1 grayscale opacity-55 hover:grayscale-0 hover:opacity-100">
-                <img src="/img/logo_institucionales/2.jpg" alt="SENA" className="h-14 w-14 rounded-full object-cover border border-[#C9A84C]/30 shadow-[0_0_0_3px_rgba(201,168,76,0.08)]" />
+              <div className="flex-shrink-0 snap-start">
+                <img src="/img/logo_institucionales/2.jpg" alt="SENA" className="h-16 md:h-20 w-28 md:w-32 rounded-[8px md:rounded-[10px] object-cover border border-[#C9A84C]/30 shadow-[0_0_0_3px_rgba(201,168,76,0.08)]" />
               </div>
-              <div className="h-20 flex items-center transition-all duration-300 transform hover:-translate-y-1 grayscale opacity-55 hover:grayscale-0 hover:opacity-100">
-                <img src="/img/logo_institucionales/3.jpg" alt="Fondo Emprender" className="h-14 w-14 rounded-full object-cover border border-[#C9A84C]/30 shadow-[0_0_0_3px_rgba(201,168,76,0.08)]" />
+              <div className="flex-shrink-0 snap-start">
+                <img src="/img/logo_institucionales/3.jpg" alt="Fondo Emprender" className="h-16 md:h-20 w-28 md:w-32 rounded-[8px md:rounded-[10px] object-cover border border-[#C9A84C]/30 shadow-[0_0_0_3px_rgba(201,168,76,0.08)]" />
               </div>
-              <div className="h-20 flex items-center transition-all duration-300 transform hover:-translate-y-1 grayscale opacity-55 hover:grayscale-0 hover:opacity-100">
-                <img src="/img/logo_institucionales/4.jpg" alt="Institución 4" className="h-14 w-14 rounded-full object-cover border border-[#C9A84C]/30 shadow-[0_0_0_3px_rgba(201,168,76,0.08)]" />
+              <div className="flex-shrink-0 snap-start">
+                <img src="/img/logo_institucionales/4.jpg" alt="Institución 4" className="h-16 md:h-20 w-44 md:w-56 rounded-[8px md:rounded-[10px] object-cover border border-[#C9A84C]/30 shadow-[0_0_0_3px_rgba(201,168,76,0.08)]" />
               </div>
             </div>
 
@@ -1630,9 +1610,9 @@ export default function App() {
       <footer className="bg-[#0E0E0E] py-16 border-t border-border-subtle">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 px-6 max-w-7xl mx-auto text-left">
           
-          <div className="md:col-span-2">
-            <span className="font-serif text-3xl font-bold text-primary mb-4 block">
-              TRÉBOL <span className="text-sm font-sans tracking-widest text-[#FAFAF8]">CAFÉ</span>
+          <div className="md:col-span-2 hidden md:block">
+            <span className="font-serif-display text-3xl font-bold text-primary mb-4 block">
+              TRÉBOL <span className="text-sm font-sans-modern tracking-widest text-[#FAFAF8]">CAFÉ</span>
             </span>
             <p className="text-text-muted text-sm max-w-sm mb-6 leading-relaxed">
               {currentLang.footer_desc}
@@ -1643,13 +1623,13 @@ export default function App() {
                 onClick={() => notify(lang === 'es' ? 'Síguenos en Instagram @trebolcafeco' : 'Follow us @trebolcafeco', 'info')}
                 className="w-10 h-10 rounded-full border border-border-subtle flex items-center justify-center text-primary hover:bg-primary hover:text-on-primary transition-all cursor-pointer"
               >
-                <span className="font-serif text-xs font-bold">IG</span>
+                <span className="font-serif-elegant text-xs font-bold">IG</span>
               </button>
               <button 
                 onClick={() => notify(lang === 'es' ? 'Comunícate con nuestro WhatsApp' : 'Open WhatsApp channel', 'info')}
                 className="w-10 h-10 rounded-full border border-border-subtle flex items-center justify-center text-primary hover:bg-primary hover:text-on-primary transition-all cursor-pointer"
               >
-                <span className="font-serif text-xs font-bold">WA</span>
+                <span className="font-serif-elegant text-xs font-bold">WA</span>
               </button>
               <button 
                 onClick={() => {
@@ -1665,7 +1645,7 @@ export default function App() {
           </div>
 
           <div>
-            <h4 className="font-sans text-xs font-black text-primary uppercase tracking-wider mb-4">
+            <h4 className="font-sans-modern text-xs font-black text-primary uppercase tracking-wider mb-4">
               {currentLang.links}
             </h4>
             <ul className="space-y-2 text-sm text-text-muted">
@@ -1673,21 +1653,18 @@ export default function App() {
                 <a href="#inicio" className="hover:text-primary transition-colors">{lang === 'es' ? 'Volver al Inicio' : 'Return to top'}</a>
               </li>
               <li>
-                <a href="#nosotros" className="hover:text-primary transition-colors">{lang === 'es' ? 'Nuestra Historia' : 'Our Story'}</a>
-              </li>
-              <li>
                 <a href="#catalogo" className="hover:text-primary transition-colors">{lang === 'es' ? 'Granos de Origen' : 'Origin Beans'}</a>
               </li>
               <li>
-                <button onClick={() => setLoyaltyHubOpen(true)} className="hover:text-primary transition-colors text-left">
+                <a href="#coworking" className="hover:text-primary transition-colors text-left">
                   {lang === 'es' ? 'Mis Pases Coworking' : 'My Coworking Passes'}
-                </button>
+                </a>
               </li>
             </ul>
           </div>
 
           <div>
-            <h4 className="font-sans text-xs font-black text-primary uppercase tracking-wider mb-4">
+            <h4 className="font-sans-modern text-xs font-black text-primary uppercase tracking-wider mb-4">
               {currentLang.newsletter}
             </h4>
             <p className="text-xs text-text-muted mb-4">
@@ -1720,7 +1697,7 @@ export default function App() {
 
         <div className="max-w-7xl mx-auto px-6 mt-16 pt-8 border-t border-border-subtle text-center">
           <p className="font-mono text-xs text-[#FAFAF8]/30">
-            {currentLang.rights}
+            © 2026 Trébol Café.
           </p>
         </div>
       </footer>
@@ -1728,17 +1705,23 @@ export default function App() {
       {/* Right Drawer: Shopping Cart Panel */}
       <AnimatePresence>
         {cartOpen && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-end">
+          <div className="fixed inset-0 z-[60] flex justify-end">
             
-            {/* Background screen canceler */}
-            <div className="absolute inset-0 cursor-pointer" onClick={() => setCartOpen(false)}></div>
+            {/* Background screen canceler / Backdrop Overlay */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setCartOpen(false)}
+            />
 
             <motion.div 
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="bg-[#1A1612] w-full max-w-md h-full shadow-2xl relative z-10 flex flex-col justify-between border-l border-border-subtle p-6 text-left"
+              className="bg-[#0A0A0A] w-full max-w-md h-full shadow-2xl relative z-10 flex flex-col justify-between border-l border-white/10 p-6 text-left"
             >
               
               <div>
@@ -1746,7 +1729,7 @@ export default function App() {
                   
                   <div className="flex items-center gap-2">
                     <ShoppingBag className="text-primary" size={20} />
-                    <h3 className="font-serif text-2xl font-bold text-[#FAFAF8]">
+                    <h3 className="font-serif-display text-2xl font-bold text-[#FAFAF8]">
                       {currentLang.cart_title}
                     </h3>
                   </div>
@@ -1829,16 +1812,6 @@ export default function App() {
                   
                   <div className="space-y-1.5 text-xs">
                     
-                    <div className="flex justify-between">
-                      <span className="text-text-muted">{currentLang.cart_subtotal}</span>
-                      <span className="font-mono text-[#FAFAF8]">${cartSubtotal.toLocaleString('es-CO')}</span>
-                    </div>
-
-                    <div className="flex justify-between">
-                      <span className="text-text-muted">{currentLang.cart_tax}</span>
-                      <span className="font-mono text-[#FAFAF8]">${cartTax.toLocaleString('es-CO')}</span>
-                    </div>
-
                     <div className="flex justify-between text-sm font-bold border-t border-border-subtle/45 pt-2">
                       <span className="text-primary">{currentLang.cart_total}</span>
                       <span className="font-mono text-primary">${cartTotal.toLocaleString('es-CO')}</span>
@@ -1867,154 +1840,176 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Loyalty Tickets / My Bookings History Drawer */}
+      {/* Mobile menu panel */}
       <AnimatePresence>
-        {loyaltyHubOpen && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-end">
+        {mobileMenuOpen && (
+          <>
+            {/* Overlay */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
+              onClick={() => setMobileMenuOpen(false)}
+            />
             
-            <div className="absolute inset-0 cursor-pointer" onClick={() => setLoyaltyHubOpen(false)}></div>
-
-            <motion.div 
-              initial={{ x: '100%' }}
+            {/* Side menu */}
+            <motion.div
+              initial={{ x: '-100%' }}
               animate={{ x: 0 }}
-              exit={{ x: '100%' }}
+              exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="bg-[#1A1612] w-full max-w-md h-full shadow-2xl relative z-10 flex flex-col justify-between border-l border-border-subtle p-6 text-left"
+              className="md:hidden fixed top-0 left-0 h-full w-72 bg-[#0A0A0A] border-r border-white/10 z-[100] flex flex-col shadow-2xl"
             >
+              <div className="p-6 border-b border-white/10 flex justify-between items-center">
+                <span className="font-serif-display text-xl font-bold text-primary">TRÉBOL CAFÉ</span>
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-2 rounded-full hover:bg-white/5 text-white/60 hover:text-primary transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
               
-              <div>
-                <div className="flex justify-between items-center border-b border-border-subtle pb-4 mb-6">
-                  
-                  <div className="flex items-center gap-2">
-                    <Ticket className="text-primary" size={20} />
-                    <h3 className="font-serif text-2xl font-bold text-[#FAFAF8]">
-                      {currentLang.history_title}
-                    </h3>
-                  </div>
+              <div className="flex-1 p-6 space-y-2">
+                <a href="#inicio" onClick={() => setMobileMenuOpen(false)} className="block py-3 tracking-widest text-[#F5F5F5] hover:text-primary transition-colors font-bold uppercase border-b border-white/5">{currentLang.subtitle}</a>
+                <a href="#catalogo" onClick={() => setMobileMenuOpen(false)} className="block py-3 tracking-widest text-[#F5F5F5] hover:text-primary transition-colors">{lang === 'es' ? 'Catálogo / Menú' : 'Menu & Coffee'}</a>
+                <a href="#coworking" onClick={() => setMobileMenuOpen(false)} className="block py-3 tracking-widest text-[#F5F5F5] hover:text-primary transition-colors">Coworking Space</a>
+                <a href="#contacto" onClick={() => setMobileMenuOpen(false)} className="block py-3 tracking-widest text-[#F5F5F5] hover:text-primary transition-colors">{lang === 'es' ? 'Contacto y Reservas' : 'Contact & Reserv.'}</a>
+              </div>
 
+              <div className="p-6 border-t border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full overflow-hidden border border-[#C9A84C]/30">
+                    <img src="/img/logo.jpg" alt="Trébol Café" className="w-full h-full object-cover" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-white/40">San Agustín, Huila</p>
+                    <p className="text-xs text-primary font-bold">Vereda El Tablón</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Dynamic Interactive Features: Product Explorer Modal */}
+      <AnimatePresence>
+        {selectedProduct && (
+          <div className="fixed inset-0 bg-[#0A0A0A]/92 backdrop-blur-md z-[60] flex items-center justify-center p-4 overflow-y-auto">
+            <motion.div 
+              initial={{ scale: 0.93, opacity: 0, y: 24 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.93, opacity: 0, y: 24 }}
+              transition={{ type: 'spring', damping: 22, stiffness: 200 }}
+              className="bg-[#1A1612] max-w-5xl w-full rounded-2xl overflow-hidden border border-border-accent shadow-2xl my-8"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2">
+                
+                {/* Image side */}
+                <div className="relative aspect-square md:aspect-auto md:h-full min-h-[420px] md:min-h-[560px]">
+                  <img 
+                    src={selectedProduct.image} 
+                    alt={selectedProduct.title} 
+                    className="absolute inset-0 w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
+                </div>
+
+                {/* Info side */}
+                <div className="p-8 md:p-12 flex flex-col justify-between bg-[#1A1612] relative">
+                  
                   <button 
-                    onClick={() => setLoyaltyHubOpen(false)}
-                    className="p-1.5 rounded-full hover:bg-bg-elevated text-text-muted hover:text-primary transition-colors"
+                    onClick={() => setSelectedProduct(null)}
+                    className="absolute top-6 right-6 p-2 rounded-full hover:bg-white/5 text-text-muted hover:text-[#FAFAF8] transition-colors"
                   >
                     <X size={20} />
                   </button>
+
+                  <div className="space-y-6">
+                    
+                    <div>
+                      <span className="font-mono text-[10px] text-primary tracking-widest uppercase bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full font-bold">
+                        {selectedProduct.category}
+                      </span>
+                      <h3 className="font-serif-display text-3xl md:text-4xl font-bold text-[#FAFAF8] mt-4 leading-tight">
+                        {selectedProduct.title}
+                      </h3>
+                      <div className="text-xl md:text-2xl font-mono text-primary mt-2 font-bold">
+                        {selectedProduct.price === 0 ? (lang === 'es' ? 'Precio al consultar' : 'Price on request') : `$${selectedProduct.price.toLocaleString('es-CO')}`}
+                      </div>
+                    </div>
+
+                    <p className="text-sm text-text-muted leading-relaxed font-light">
+                      {selectedProduct.description}
+                    </p>
+
+                    {/* Technical specifications details */}
+                    {selectedProduct.details && (
+                      <div className="pt-6 border-t border-border-subtle grid grid-cols-2 gap-4 text-xs">
+                        {selectedProduct.details.origin && (
+                          <div>
+                            <span className="text-[#FAFAF8]/45 block mb-1 uppercase tracking-wider font-mono text-[9px]">{lang === 'es' ? 'Origen' : 'Origin'}</span>
+                            <span className="font-sans-modern font-semibold text-[#FAFAF8]">{selectedProduct.details.origin}</span>
+                          </div>
+                        )}
+                        {selectedProduct.details.intensity && (
+                          <div>
+                            <span className="text-[#FAFAF8]/45 block mb-1 uppercase tracking-wider font-mono text-[9px]">{lang === 'es' ? 'Intensidad' : 'Intensity'}</span>
+                            <span className="font-sans-modern font-semibold text-[#FAFAF8]">{selectedProduct.details.intensity}</span>
+                          </div>
+                        )}
+                        {selectedProduct.details.allergens && (
+                          <div>
+                            <span className="text-[#FAFAF8]/45 block mb-1 uppercase tracking-wider font-mono text-[9px]">{lang === 'es' ? 'Alérgenos' : 'Allergens'}</span>
+                            <span className="font-sans-modern font-semibold text-red-300">{selectedProduct.details.allergens}</span>
+                          </div>
+                        )}
+                        {selectedProduct.details.wifi && (
+                          <div>
+                            <span className="text-[#FAFAF8]/45 block mb-1 uppercase tracking-wider font-mono text-[9px]">{lang === 'es' ? 'Conectividad' : 'Connectivity'}</span>
+                            <span className="font-sans-modern font-semibold text-primary">{selectedProduct.details.wifi}</span>
+                          </div>
+                        )}
+                        {selectedProduct.details.compañía && (
+                          <div>
+                            <span className="text-[#FAFAF8]/45 block mb-1 uppercase tracking-wider font-mono text-[9px]">{lang === 'es' ? 'Compañía' : 'Company'}</span>
+                            <span className="font-sans-modern font-semibold text-[#FAFAF8]">{selectedProduct.details.compañía}</span>
+                          </div>
+                        )}
+                        {(selectedProduct.details as any).nota && (
+                          <div className="col-span-2">
+                            <span className="text-[#FAFAF8]/45 block mb-1 uppercase tracking-wider font-mono text-[9px]">{lang === 'es' ? 'Nota adicional' : 'Additional note'}</span>
+                            <span className="font-sans-modern text-[#FAFAF8]/75 leading-relaxed font-light">{(selectedProduct.details as any).nota}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {/* Action buttons */}
+                  <div className="flex gap-4 mt-4">
+                    <button
+                      onClick={() => {
+                        addToCart(selectedProduct);
+                        setSelectedProduct(null);
+                      }}
+                      className="flex-1 py-4 bg-primary text-on-primary font-black text-sm uppercase tracking-widest rounded-full hover:brightness-110 transition-all shadow-lg shadow-primary/20"
+                    >
+                      {selectedProduct.category === 'Coworking' ? currentLang.btn_reserve : currentLang.btn_add}
+                    </button>
+                    <button
+                      onClick={() => setSelectedProduct(null)}
+                      className="px-8 py-4 border border-border-subtle text-text-muted hover:text-[#FAFAF8] font-bold text-sm uppercase tracking-widest rounded-full transition-colors"
+                    >
+                      {lang === 'es' ? 'Cerrar' : 'Close'}
+                    </button>
+                  </div>
+
                 </div>
 
-                {bookings.length === 0 ? (
-                  <div className="text-center py-20 text-text-muted">
-                    <Ticket size={40} className="mx-auto text-primary/10 mb-4" />
-                    <p className="text-sm">
-                      {currentLang.history_no}
-                    </p>
-                    <p className="text-xs text-text-subtle mt-2">
-                      {lang === 'es' ? 'Haz tu primera reserva de coworking o añade un café al pedido.' : 'Book a coworking layout or add specialty coffee to start.'}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-6 max-h-[75vh] overflow-y-auto pr-2">
-                    {bookings.map((booking) => (
-                      <div 
-                        key={booking.id}
-                        className="bg-black/40 rounded-xl border border-primary/20 overflow-hidden relative"
-                      >
-                        {/* Upper ticket cut effect indicator */}
-                        <div className="absolute top-1/2 -left-2 w-4 h-4 bg-[#1A1612] border-r border-primary/20 rounded-full -translate-y-1/2"></div>
-                        <div className="absolute top-1/2 -right-2 w-4 h-4 bg-[#1A1612] border-l border-primary/20 rounded-full -translate-y-1/2"></div>
-
-                        {/* Top layout */}
-                        <div className="p-4 border-b border-dashed border-primary/20 flex justify-between items-start">
-                          <div>
-                            <span className="inline-block px-2 py-0.5 rounded bg-primary/10 border border-primary/35 text-primary text-[9px] font-bold uppercase tracking-wider mb-1">
-                              {currentLang.history_badge}
-                            </span>
-                            <h4 className="text-sm font-serif font-black text-[#FAFAF8]">{booking.workspaceType}</h4>
-                            <p className="text-[10px] text-text-muted mt-0.5">Ref: {booking.code}</p>
-                          </div>
-                          
-                          <div className="text-right">
-                            <span className="font-mono text-xs text-primary font-bold block">${booking.price.toLocaleString('es-CO')}</span>
-                            <span className="text-[9px] text-[#FAFAF8]/30 font-mono">SENA Backed</span>
-                          </div>
-                        </div>
-
-                        {/* Bottom details with simulated bar/QR codes */}
-                        <div className="p-4 bg-[#1A1612]/50 space-y-2.5">
-                          
-                          <div className="grid grid-cols-2 gap-2 text-[10px]">
-                            <div>
-                              <span className="text-text-subtle block">{lang === 'es' ? 'NÓMADA:' : 'NOMAD:'}</span>
-                              <span className="text-text-muted font-bold truncate block">{booking.fullName}</span>
-                            </div>
-                            <div>
-                              <span className="text-text-subtle block">{lang === 'es' ? 'FECHA:' : 'DATE:'}</span>
-                              <span className="text-text-muted font-bold block">{booking.date}</span>
-                            </div>
-                            <div>
-                              <span className="text-text-subtle block">{lang === 'es' ? 'BLOQUE:' : 'SESSION:'}</span>
-                              <span className="text-text-muted font-bold block">{booking.slot}</span>
-                            </div>
-                            <div>
-                              <span className="text-text-subtle block">{lang === 'es' ? 'CONEXIÓN:' : 'ACCESS:'}</span>
-                              <span className="text-primary font-bold flex items-center gap-1">
-                                <Wifi size={10} /> 300 Mbps Symmetrical
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Simulated high-end barcode for checkin checking */}
-                          <div className="pt-2">
-                            <div className="bg-[#FAFAF8] p-2 rounded flex flex-col items-center justify-center gap-1">
-                              <div className="flex gap-0.5 h-10 w-full justify-between overflow-hidden">
-                                {Array.from({ length: 45 }).map((_, i) => (
-                                  <span 
-                                    key={i} 
-                                    className="bg-black shrink-0" 
-                                    style={{ width: `${(i % 3 === 0 ? 3 : i % 2 === 0 ? 1 : 2)}px` }}
-                                  ></span>
-                                ))}
-                              </div>
-                              <span className="font-mono text-[9px] tracking-widest text-[#0A0A0A] font-bold">
-                                {booking.code}-{booking.id}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="flex gap-2 justify-end pt-2 text-[10px] uppercase font-bold">
-                            <button 
-                              onClick={() => {
-                                notify(lang === 'es' ? 'Presenta este código al ingresar a Trébol Café' : 'Present this code on entry to Trébol Café', 'info');
-                              }}
-                              className="text-primary hover:underline cursor-pointer"
-                            >
-                              {lang === 'es' ? 'Descargar PDF' : 'Save Pass'}
-                            </button>
-                            <span className="text-[#FAFAF8]/20">|</span>
-                            <button 
-                              onClick={() => cancelBooking(booking.id)}
-                              className="text-red-400/80 hover:text-red-400 cursor-pointer"
-                            >
-                              {lang === 'es' ? 'Cancelar / Borrar' : 'Delete'}
-                            </button>
-                          </div>
-
-                        </div>
-
-                      </div>
-                    ))}
-                  </div>
-                )}
-
               </div>
-
-              <div className="border-t border-border-subtle pt-4 text-center">
-                <button
-                  onClick={() => setLoyaltyHubOpen(false)}
-                  className="px-6 py-2.5 border border-border-subtle hover:border-primary text-text-muted hover:text-primary rounded-full text-xs uppercase tracking-wider font-bold w-full"
-                >
-                  {lang === 'es' ? 'Regresar a la Tienda' : 'Back to Experience'}
-                </button>
-              </div>
-
             </motion.div>
           </div>
         )}
@@ -2022,18 +2017,14 @@ export default function App() {
 
       {/* WhatsApp Floating Button */}
       <a
-        href="https://wa.me/573144827083"
+        href="https://wa.me/573213298852"
         target="_blank"
         rel="noopener noreferrer"
         className="fixed bottom-6 right-6 z-40 bg-[#25D366] text-white w-14 h-14 rounded-full flex items-center justify-center shadow-2xl hover:bg-[#20ba5a] hover:scale-110 active:scale-95 transition-all duration-300 animate-whatsapp"
         aria-label="Contact on WhatsApp"
       >
-        <svg
-          className="w-7 h-7 fill-current"
-          viewBox="0 0 24 24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.725 1.451 5.486 0 9.95-4.46 9.953-9.952.002-2.661-1.03-5.164-2.906-7.04C16.544 1.737 14.048.74 11.393.74c-5.49 0-9.956 4.463-9.959 9.955-.001 1.748.461 3.456 1.336 4.966L1.802 21.6l6.02-1.577c1.468.802 3.033 1.226 4.625 1.228h-.002zM18.04 15.65c-.328-.164-1.94-.957-2.24-1.066-.3-.11-.52-.164-.74.164-.22.328-.85 1.066-1.04 1.284-.19.219-.38.246-.71.082-1.21-.606-2.025-1.074-2.836-2.47-.21-.36.21-.334.6-.11.35.2.71.606.82.82.11.22.06.41-.03.575-.08.164-.74 1.776-.98 2.378-.24.578-.48.49-.66.49-.18 0-.38-.027-.58-.027-.2 0-.52.075-.79.37-.27.295-1.04 1.016-1.04 2.479 0 1.462 1.06 2.875 1.21 3.067.15.192 2.09 3.2 5.07 4.487.71.307 1.26.49 1.69.627.72.228 1.37.196 1.89.118.57-.085 1.94-.793 2.21-1.529.27-.736.27-1.37.19-1.5-.08-.13-.3-.21-.63-.375z" />
+        <svg viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
         </svg>
       </a>
 

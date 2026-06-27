@@ -1,0 +1,6 @@
+{
+  "name": "Trébol Café",
+  "description": "Artisanal Workspace, Specialty Coffee House, and Premium Coworking in San Agustín, Huila, Colombia.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
