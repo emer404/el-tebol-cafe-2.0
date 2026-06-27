@@ -899,6 +899,7 @@ export default function App() {
                   src="/img/hero_bg.png"
                   alt="Trébol Café — especialidad y coworking"
                   className="hero-hero-img"
+                  loading="eager"
                 />
                 {/* Overlay degradado en bordes */}
                 <div className="hero-img-edge-fade" />
@@ -1065,6 +1066,7 @@ export default function App() {
                               src={product.image} 
                               alt={product.title} 
                               referrerPolicy="no-referrer"
+                              loading="lazy"
                             />
 
 
@@ -1267,6 +1269,7 @@ export default function App() {
                       src={selectedProduct.image} 
                       alt={selectedProduct.title} 
                       referrerPolicy="no-referrer"
+                      loading="lazy"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/10 to-transparent"></div>
                     <div className="absolute bottom-6 left-6 right-6 text-left">
@@ -1588,16 +1591,16 @@ export default function App() {
             {/* Institutional support logos from original brand - Horizontal scroll for all */}
             <div className="logo-institucionales flex justify-center items-center gap-6 md:gap-12 overflow-x-auto snap-x snap-mandatory scrollbar-hide px-4 bg-[#0A0A0A]/90 backdrop-blur-sm">
               <div className="flex-shrink-0 snap-start">
-                <img src="/img/logo_institucionales/1.jpg" alt="Colombia Potencia de la Vida" className="h-16 md:h-20 w-28 md:w-32 rounded-[8px md:rounded-[10px] object-cover border border-[#C9A84C]/30 shadow-[0_0_0_3px_rgba(201,168,76,0.08)]" />
+                <img src="/img/logo_institucionales/1.jpg" alt="Colombia Potencia de la Vida" className="h-16 md:h-20 w-28 md:w-32 rounded-[8px md:rounded-[10px] object-cover border border-[#C9A84C]/30 shadow-[0_0_0_3px_rgba(201,168,76,0.08)]" loading="lazy" />
               </div>
               <div className="flex-shrink-0 snap-start">
-                <img src="/img/logo_institucionales/2.jpg" alt="SENA" className="h-16 md:h-20 w-28 md:w-32 rounded-[8px md:rounded-[10px] object-cover border border-[#C9A84C]/30 shadow-[0_0_0_3px_rgba(201,168,76,0.08)]" />
+                <img src="/img/logo_institucionales/2.jpg" alt="SENA" className="h-16 md:h-20 w-28 md:w-32 rounded-[8px md:rounded-[10px] object-cover border border-[#C9A84C]/30 shadow-[0_0_0_3px_rgba(201,168,76,0.08)]" loading="lazy" />
               </div>
               <div className="flex-shrink-0 snap-start">
-                <img src="/img/logo_institucionales/3.jpg" alt="Fondo Emprender" className="h-16 md:h-20 w-28 md:w-32 rounded-[8px md:rounded-[10px] object-cover border border-[#C9A84C]/30 shadow-[0_0_0_3px_rgba(201,168,76,0.08)]" />
+                <img src="/img/logo_institucionales/3.jpg" alt="Fondo Emprender" className="h-16 md:h-20 w-28 md:w-32 rounded-[8px md:rounded-[10px] object-cover border border-[#C9A84C]/30 shadow-[0_0_0_3px_rgba(201,168,76,0.08)]" loading="lazy" />
               </div>
               <div className="flex-shrink-0 snap-start">
-                <img src="/img/logo_institucionales/4.jpg" alt="Institución 4" className="h-16 md:h-20 w-44 md:w-56 rounded-[8px md:rounded-[10px] object-cover border border-[#C9A84C]/30 shadow-[0_0_0_3px_rgba(201,168,76,0.08)]" />
+                <img src="/img/logo_institucionales/4.jpg" alt="Institución 4" className="h-16 md:h-20 w-44 md:w-56 rounded-[8px md:rounded-[10px] object-cover border border-[#C9A84C]/30 shadow-[0_0_0_3px_rgba(201,168,76,0.08)]" loading="lazy" />
               </div>
             </div>
 
@@ -1881,7 +1884,7 @@ export default function App() {
               <div className="p-6 border-t border-white/10">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full overflow-hidden border border-[#C9A84C]/30">
-                    <img src="/img/logo.jpg" alt="Trébol Café" className="w-full h-full object-cover" />
+                    <img src="/img/logo.jpg" alt="Trébol Café" className="w-full h-full object-cover" loading="lazy" />
                   </div>
                   <div>
                     <p className="text-xs text-white/40">San Agustín, Huila</p>
